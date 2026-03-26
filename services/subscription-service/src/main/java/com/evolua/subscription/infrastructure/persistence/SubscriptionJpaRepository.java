@@ -1,0 +1,1 @@
+package com.evolua.subscription.infrastructure.persistence; import java.util.List; import org.springframework.data.jpa.repository.JpaRepository; public interface SubscriptionJpaRepository extends JpaRepository<SubscriptionEntity, Long> { List<SubscriptionEntity> findAllByUserId(String userId); }

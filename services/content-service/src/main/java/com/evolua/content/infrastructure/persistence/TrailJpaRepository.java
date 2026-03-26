@@ -1,0 +1,1 @@
+package com.evolua.content.infrastructure.persistence; import java.util.List; import org.springframework.data.jpa.repository.JpaRepository; public interface TrailJpaRepository extends JpaRepository<TrailEntity, Long> { List<TrailEntity> findAllByUserId(String userId); }

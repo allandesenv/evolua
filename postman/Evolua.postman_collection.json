@@ -1,0 +1,384 @@
+{
+  "info": {
+    "_postman_id": "2aaef5c4-8b45-4c40-9e42-75a2692fd6b4",
+    "name": "Evolua Backend",
+    "description": "Collection pronta para importacao no Postman com os principais endpoints do backend Evolua.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "gatewayUrl", "value": "http://localhost:8080" },
+    { "key": "authUrl", "value": "http://localhost:8081" },
+    { "key": "userUrl", "value": "http://localhost:8082" },
+    { "key": "contentUrl", "value": "http://localhost:8083" },
+    { "key": "emotionalUrl", "value": "http://localhost:8084" },
+    { "key": "socialUrl", "value": "http://localhost:8085" },
+    { "key": "chatUrl", "value": "http://localhost:8086" },
+    { "key": "subscriptionUrl", "value": "http://localhost:8087" },
+    { "key": "notificationUrl", "value": "http://localhost:8088" },
+    { "key": "email", "value": "teste@evolua.local" },
+    { "key": "password", "value": "123456" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Gateway Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{gatewayUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "Auth Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{authUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "User Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{userUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "Content Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{contentUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "Emotional Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{emotionalUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "Social Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{socialUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "Chat Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{chatUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "Subscription Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{subscriptionUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "Notification Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notificationUrl}}/actuator/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{authUrl}}/v1/public/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body && body.data) {",
+                  "  pm.collectionVariables.set('accessToken', body.data.accessToken || '');",
+                  "  pm.collectionVariables.set('refreshToken', body.data.refreshToken || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{authUrl}}/v1/public/auth/login"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{authUrl}}/v1/public/auth/refresh"
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{authUrl}}/v1/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Create Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Teste\",\n  \"bio\": \"Perfil inicial\",\n  \"journeyLevel\": 1,\n  \"premium\": false\n}"
+            },
+            "url": "{{userUrl}}/v1/profiles"
+          }
+        },
+        {
+          "name": "List Profiles",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{userUrl}}/v1/profiles"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content",
+      "item": [
+        {
+          "name": "Create Trail",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Respiracao\",\n  \"description\": \"Trilha inicial\",\n  \"category\": \"ansiedade\",\n  \"premium\": false\n}"
+            },
+            "url": "{{contentUrl}}/v1/trails"
+          }
+        },
+        {
+          "name": "List Trails",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{contentUrl}}/v1/trails"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Emotional",
+      "item": [
+        {
+          "name": "Create Check-In",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mood\": \"calmo\",\n  \"reflection\": \"Dia produtivo\",\n  \"energyLevel\": 7,\n  \"recommendedPractice\": \"respiracao guiada\"\n}"
+            },
+            "url": "{{emotionalUrl}}/v1/check-ins"
+          }
+        },
+        {
+          "name": "List Check-Ins",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{emotionalUrl}}/v1/check-ins"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Social",
+      "item": [
+        {
+          "name": "Create Post",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Primeiro post\",\n  \"community\": \"geral\",\n  \"visibility\": \"PUBLIC\"\n}"
+            },
+            "url": "{{socialUrl}}/v1/posts"
+          }
+        },
+        {
+          "name": "List Posts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{socialUrl}}/v1/posts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Create Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientId\": \"user-2\",\n  \"content\": \"Ola\"\n}"
+            },
+            "url": "{{chatUrl}}/v1/messages"
+          }
+        },
+        {
+          "name": "List Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{chatUrl}}/v1/messages"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscription",
+      "item": [
+        {
+          "name": "Create Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planCode\": \"premium-monthly\",\n  \"status\": \"ACTIVE\",\n  \"billingCycle\": \"MONTHLY\",\n  \"premium\": true\n}"
+            },
+            "url": "{{subscriptionUrl}}/v1/subscriptions"
+          }
+        },
+        {
+          "name": "List Subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{subscriptionUrl}}/v1/subscriptions"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification",
+      "item": [
+        {
+          "name": "Create Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"EMAIL\",\n  \"message\": \"Lembrete diario\"\n}"
+            },
+            "url": "{{notificationUrl}}/v1/notifications"
+          }
+        },
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{notificationUrl}}/v1/notifications"
+          }
+        }
+      ]
+    }
+  ]
+}

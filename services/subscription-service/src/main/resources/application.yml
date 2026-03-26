@@ -1,0 +1,27 @@
+server:
+  port: ${SERVER_PORT:8087}
+spring:
+  application:
+    name: subscription-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/evolua}
+    username: ${SPRING_DATASOURCE_USERNAME:evolua}
+    password: ${SPRING_DATASOURCE_PASSWORD:evolua}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+app:
+  security:
+    jwt:
+      secret: ${APP_SECURITY_JWT_SECRET:change-this-secret-before-production-change-this-secret}

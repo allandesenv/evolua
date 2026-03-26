@@ -1,0 +1,120 @@
+services:
+  gateway-service:
+    build:
+      context: .
+      dockerfile: gateway-service/Dockerfile
+    ports: ["8080:8080"]
+    depends_on: [auth-service, user-service, content-service, emotional-service, social-service, chat-service, subscription-service, notification-service]
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    ports: ["8081:8081"]
+    environment:
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/auth
+      SPRING_DATASOURCE_USERNAME: evolua
+      SPRING_DATASOURCE_PASSWORD: evolua
+      APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+    depends_on: [postgres-auth]
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    ports: ["8082:8082"]
+    environment:
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/user
+      SPRING_DATASOURCE_USERNAME: evolua
+      SPRING_DATASOURCE_PASSWORD: evolua
+      APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+    depends_on: [postgres-user]
+  content-service:
+    build:
+      context: .
+      dockerfile: services/content-service/Dockerfile
+    ports: ["8083:8083"]
+    environment:
+      SERVER_PORT: 8083
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-content:5432/content
+      SPRING_DATASOURCE_USERNAME: evolua
+      SPRING_DATASOURCE_PASSWORD: evolua
+      APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+    depends_on: [postgres-content]
+  emotional-service:
+    build:
+      context: .
+      dockerfile: services/emotional-service/Dockerfile
+    ports: ["8084:8084"]
+    environment:
+      SERVER_PORT: 8084
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-emotional:5432/emotional
+      SPRING_DATASOURCE_USERNAME: evolua
+      SPRING_DATASOURCE_PASSWORD: evolua
+      APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+    depends_on: [postgres-emotional]
+  social-service:
+    build:
+      context: .
+      dockerfile: services/social-service/Dockerfile
+    ports: ["8085:8085"]
+    environment:
+      SERVER_PORT: 8085
+      SPRING_DATA_MONGODB_URI: mongodb://evolua:evolua@mongo-social:27017/social?authSource=admin
+      APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+    depends_on: [mongo-social]
+  chat-service:
+    build:
+      context: .
+      dockerfile: services/chat-service/Dockerfile
+    ports: ["8086:8086"]
+    environment:
+      SERVER_PORT: 8086
+      SPRING_DATA_MONGODB_URI: mongodb://evolua:evolua@mongo-chat:27017/chat?authSource=admin
+      APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+    depends_on: [mongo-chat]
+  subscription-service:
+    build:
+      context: .
+      dockerfile: services/subscription-service/Dockerfile
+    ports: ["8087:8087"]
+    environment:
+      SERVER_PORT: 8087
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-subscription:5432/subscription
+      SPRING_DATASOURCE_USERNAME: evolua
+      SPRING_DATASOURCE_PASSWORD: evolua
+      APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+    depends_on: [postgres-subscription]
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    ports: ["8088:8088"]
+    environment:
+      SERVER_PORT: 8088
+      SPRING_DATA_REDIS_HOST: redis
+      APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+    depends_on: [redis]
+  postgres-auth:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: auth, POSTGRES_USER: evolua, POSTGRES_PASSWORD: evolua }
+  postgres-user:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: user, POSTGRES_USER: evolua, POSTGRES_PASSWORD: evolua }
+  postgres-content:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: content, POSTGRES_USER: evolua, POSTGRES_PASSWORD: evolua }
+  postgres-emotional:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: emotional, POSTGRES_USER: evolua, POSTGRES_PASSWORD: evolua }
+  postgres-subscription:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: subscription, POSTGRES_USER: evolua, POSTGRES_PASSWORD: evolua }
+  mongo-social:
+    image: mongo:8
+    environment: { MONGO_INITDB_ROOT_USERNAME: evolua, MONGO_INITDB_ROOT_PASSWORD: evolua }
+  mongo-chat:
+    image: mongo:8
+    environment: { MONGO_INITDB_ROOT_USERNAME: evolua, MONGO_INITDB_ROOT_PASSWORD: evolua }
+  redis:
+    image: redis:8-alpine

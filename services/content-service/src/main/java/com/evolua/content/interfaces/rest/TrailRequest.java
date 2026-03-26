@@ -1,0 +1,1 @@
+package com.evolua.content.interfaces.rest; public record TrailRequest(@jakarta.validation.constraints.NotBlank String title, @jakarta.validation.constraints.NotBlank String description, @jakarta.validation.constraints.NotBlank String category, @jakarta.validation.constraints.NotNull Boolean premium) { }

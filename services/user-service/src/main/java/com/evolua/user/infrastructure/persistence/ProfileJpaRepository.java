@@ -1,0 +1,1 @@
+package com.evolua.user.infrastructure.persistence; import java.util.List; import org.springframework.data.jpa.repository.JpaRepository; public interface ProfileJpaRepository extends JpaRepository<ProfileEntity, Long> { List<ProfileEntity> findAllByUserId(String userId); }

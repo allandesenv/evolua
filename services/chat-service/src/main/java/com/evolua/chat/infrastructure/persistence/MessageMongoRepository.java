@@ -1,0 +1,1 @@
+package com.evolua.chat.infrastructure.persistence; import java.util.List; import org.springframework.data.mongodb.repository.MongoRepository; public interface MessageMongoRepository extends MongoRepository<MessageDocument, String> { List<MessageDocument> findAllByUserId(String userId); }

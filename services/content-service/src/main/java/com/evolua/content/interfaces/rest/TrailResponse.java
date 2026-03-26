@@ -1,0 +1,1 @@
+package com.evolua.content.interfaces.rest; import java.time.Instant; public record TrailResponse(Long id, String userId, String title, String description, String category, Boolean premium, Instant createdAt) { }

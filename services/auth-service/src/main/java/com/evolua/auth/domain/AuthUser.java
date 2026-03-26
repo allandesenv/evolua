@@ -1,0 +1,1 @@
+package com.evolua.auth.domain; import java.time.Instant; import java.util.List; public record AuthUser(Long id, String userId, String email, String passwordHash, List<String> roles, Instant createdAt) { }

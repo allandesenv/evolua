@@ -1,0 +1,1 @@
+package com.evolua.emotional.interfaces.rest; import com.evolua.emotional.domain.CheckIn; import org.mapstruct.Mapper; @Mapper(componentModel = "spring") public interface CheckInMapper { CheckInResponse toResponse(CheckIn item); }

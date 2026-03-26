@@ -1,0 +1,1 @@
+package com.evolua.notification.domain; import java.util.List; public interface NotificationJobRepository { NotificationJob save(NotificationJob item); List<NotificationJob> findAllByUserId(String userId); }

@@ -1,0 +1,1 @@
+package com.evolua.subscription.interfaces.rest; public record SubscriptionRequest(@jakarta.validation.constraints.NotBlank String planCode, @jakarta.validation.constraints.NotBlank String status, @jakarta.validation.constraints.NotBlank String billingCycle, @jakarta.validation.constraints.NotNull Boolean premium) { }

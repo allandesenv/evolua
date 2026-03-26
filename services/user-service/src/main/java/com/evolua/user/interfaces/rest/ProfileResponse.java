@@ -1,0 +1,1 @@
+package com.evolua.user.interfaces.rest; import java.time.Instant; public record ProfileResponse(Long id, String userId, String displayName, String bio, Integer journeyLevel, Boolean premium, Instant createdAt) { }

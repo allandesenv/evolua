@@ -1,0 +1,1 @@
+package com.evolua.content.interfaces.rest; import com.evolua.content.domain.Trail; import org.mapstruct.Mapper; @Mapper(componentModel = "spring") public interface TrailMapper { TrailResponse toResponse(Trail item); }

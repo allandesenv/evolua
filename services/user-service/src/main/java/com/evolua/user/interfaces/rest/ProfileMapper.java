@@ -1,0 +1,1 @@
+package com.evolua.user.interfaces.rest; import com.evolua.user.domain.Profile; import org.mapstruct.Mapper; @Mapper(componentModel = "spring") public interface ProfileMapper { ProfileResponse toResponse(Profile item); }
