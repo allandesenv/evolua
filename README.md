@@ -76,6 +76,12 @@ Ver containers:
 docker compose ps
 ```
 
+O ambiente local tambem sobe com seeds idempotentes de primeira experiencia:
+
+- login seed: `clara@evolua.local`
+- senha seed: `123456`
+- perfil, trilhas, check-ins, feed, conversas e notificacoes iniciais
+
 Logs consolidados:
 
 ```bash
@@ -116,6 +122,34 @@ Infra:
 - Mongo social: container interno `27017`
 - Mongo chat: container interno `27017`
 - Redis: container interno `6379`
+
+## Dados Iniciais
+
+Os seeds sao voltados para desenvolvimento local e ajudam a evitar telas vazias logo no primeiro acesso.
+
+Usuario pronto para login:
+
+```bash
+curl -X POST http://localhost:8081/v1/public/auth/login ^
+  -H "Content-Type: application/json" ^
+  -d "{\"email\":\"clara@evolua.local\",\"password\":\"123456\"}"
+```
+
+Comunidades seed usadas no feed:
+
+- `geral`
+- `ansiedade`
+- `sono`
+- `rotina`
+- `mindfulness`
+- `autoconhecimento`
+
+Para limpar e recriar todos os dados iniciais:
+
+```bash
+docker compose down -v
+docker compose up --build -d
+```
 
 ## Swagger
 

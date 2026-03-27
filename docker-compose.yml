@@ -15,6 +15,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/auth
       SPRING_DATASOURCE_USERNAME: evolua
       SPRING_DATASOURCE_PASSWORD: evolua
+      APP_SEED_ENABLED: "true"
       APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
     depends_on: [postgres-auth]
   user-service:
@@ -61,6 +62,7 @@ services:
     environment:
       SERVER_PORT: 8085
       SPRING_DATA_MONGODB_URI: mongodb://evolua:evolua@mongo-social:27017/social?authSource=admin
+      APP_SEED_ENABLED: "true"
       APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
     depends_on: [mongo-social]
   chat-service:
@@ -71,6 +73,7 @@ services:
     environment:
       SERVER_PORT: 8086
       SPRING_DATA_MONGODB_URI: mongodb://evolua:evolua@mongo-chat:27017/chat?authSource=admin
+      APP_SEED_ENABLED: "true"
       APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
     depends_on: [mongo-chat]
   subscription-service:
@@ -93,6 +96,7 @@ services:
     environment:
       SERVER_PORT: 8088
       SPRING_DATA_REDIS_HOST: redis
+      APP_SEED_ENABLED: "true"
       APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
     depends_on: [redis]
   postgres-auth:
