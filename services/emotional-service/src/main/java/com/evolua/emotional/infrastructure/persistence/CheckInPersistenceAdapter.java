@@ -1,1 +1,71 @@
-package com.evolua.emotional.infrastructure.persistence; import com.evolua.emotional.domain.CheckIn; import com.evolua.emotional.domain.CheckInRepository; import java.util.List; import org.springframework.stereotype.Repository; @Repository public class CheckInPersistenceAdapter implements CheckInRepository { private final CheckInJpaRepository repository; public CheckInPersistenceAdapter(CheckInJpaRepository repository) { this.repository = repository; } public CheckIn save(CheckIn item) { CheckInEntity entity = new CheckInEntity(); entity.setId(item.id()); entity.setUserId(item.userId()); entity.setMood(item.mood()); entity.setReflection(item.reflection()); entity.setEnergyLevel(item.energyLevel()); entity.setRecommendedPractice(item.recommendedPractice()); entity.setCreatedAt(item.createdAt()); CheckInEntity saved = repository.save(entity); return new CheckIn(saved.getId(), saved.getUserId(), saved.getMood(), saved.getReflection(), saved.getEnergyLevel(), saved.getRecommendedPractice(), saved.getCreatedAt()); } public List<CheckIn> findAllByUserId(String userId) { return repository.findAllByUserId(userId).stream().map(saved -> new CheckIn(saved.getId(), saved.getUserId(), saved.getMood(), saved.getReflection(), saved.getEnergyLevel(), saved.getRecommendedPractice(), saved.getCreatedAt())).toList(); } }
+package com.evolua.emotional.infrastructure.persistence;
+
+import com.evolua.emotional.domain.CheckIn;
+import com.evolua.emotional.domain.CheckInRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class CheckInPersistenceAdapter implements CheckInRepository {
+  private final CheckInJpaRepository repository;
+
+  public CheckInPersistenceAdapter(CheckInJpaRepository repository) {
+    this.repository = repository;
+  }
+
+  public CheckIn save(CheckIn item) {
+    CheckInEntity entity = new CheckInEntity();
+    entity.setId(item.id());
+    entity.setUserId(item.userId());
+    entity.setMood(item.mood());
+    entity.setReflection(item.reflection());
+    entity.setEnergyLevel(item.energyLevel());
+    entity.setRecommendedPractice(item.recommendedPractice());
+    entity.setCreatedAt(item.createdAt());
+    CheckInEntity saved = repository.save(entity);
+    return new CheckIn(
+        saved.getId(),
+        saved.getUserId(),
+        saved.getMood(),
+        saved.getReflection(),
+        saved.getEnergyLevel(),
+        saved.getRecommendedPractice(),
+        saved.getCreatedAt());
+  }
+
+  public Page<CheckIn> findAllByUserId(String userId, Pageable pageable, String search, String mood) {
+    Specification<CheckInEntity> specification =
+        Specification.where((root, query, cb) -> cb.equal(root.get("userId"), userId));
+
+    if (search != null && !search.isBlank()) {
+      var normalized = "%" + search.toLowerCase() + "%";
+      specification =
+          specification.and(
+              (root, query, cb) ->
+                  cb.or(
+                      cb.like(cb.lower(root.get("reflection")), normalized),
+                      cb.like(cb.lower(root.get("recommendedPractice")), normalized),
+                      cb.like(cb.lower(root.get("mood")), normalized)));
+    }
+
+    if (mood != null && !mood.isBlank()) {
+      var normalizedMood = mood.toLowerCase();
+      specification =
+          specification.and((root, query, cb) -> cb.equal(cb.lower(root.get("mood")), normalizedMood));
+    }
+
+    return repository.findAll(specification, pageable)
+        .map(
+            saved ->
+                new CheckIn(
+                    saved.getId(),
+                    saved.getUserId(),
+                    saved.getMood(),
+                    saved.getReflection(),
+                    saved.getEnergyLevel(),
+                    saved.getRecommendedPractice(),
+                    saved.getCreatedAt()));
+  }
+}

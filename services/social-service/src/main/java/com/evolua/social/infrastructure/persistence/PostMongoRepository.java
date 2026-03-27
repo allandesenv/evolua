@@ -1,1 +1,5 @@
-package com.evolua.social.infrastructure.persistence; import java.util.List; import org.springframework.data.mongodb.repository.MongoRepository; public interface PostMongoRepository extends MongoRepository<PostDocument, String> { List<PostDocument> findAllByUserId(String userId); }
+package com.evolua.social.infrastructure.persistence;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+public interface PostMongoRepository extends MongoRepository<PostDocument, String> {}

@@ -1,1 +1,26 @@
-package com.evolua.social.application; import com.evolua.social.domain.Post; import com.evolua.social.domain.PostRepository; import java.time.Instant; import java.util.List; import org.springframework.stereotype.Service; @Service public class PostService { private final PostRepository repository; public PostService(PostRepository repository) { this.repository = repository; } public Post create(String userId, String content, String community, String visibility) { return repository.save(new Post(null, userId, content, community, visibility, Instant.now())); } public List<Post> list(String userId) { return repository.findAllByUserId(userId); } }
+package com.evolua.social.application;
+
+import com.evolua.social.domain.Post;
+import com.evolua.social.domain.PostRepository;
+import java.time.Instant;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+@Service
+public class PostService {
+  private final PostRepository repository;
+
+  public PostService(PostRepository repository) {
+    this.repository = repository;
+  }
+
+  public Post create(String userId, String content, String community, String visibility) {
+    return repository.save(new Post(null, userId, content, community, visibility, Instant.now()));
+  }
+
+  public Page<Post> list(
+      String userId, Pageable pageable, String search, String community, String visibility) {
+    return repository.findAllByUserId(userId, pageable, search, community, visibility);
+  }
+}
