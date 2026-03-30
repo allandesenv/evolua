@@ -1,1 +1,16 @@
-package com.evolua.content.interfaces.rest; import java.time.Instant; public record TrailResponse(Long id, String userId, String title, String description, String category, Boolean premium, Instant createdAt) { }
+package com.evolua.content.interfaces.rest;
+
+import java.time.Instant;
+import java.util.List;
+
+public record TrailResponse(
+    Long id,
+    String userId,
+    String title,
+    String summary,
+    String content,
+    String category,
+    Boolean premium,
+    Boolean accessible,
+    List<TrailMediaLinkResponse> mediaLinks,
+    Instant createdAt) {}

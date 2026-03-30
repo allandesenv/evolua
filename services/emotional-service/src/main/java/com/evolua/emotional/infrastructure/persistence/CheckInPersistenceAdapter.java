@@ -2,6 +2,7 @@ package com.evolua.emotional.infrastructure.persistence;
 
 import com.evolua.emotional.domain.CheckIn;
 import com.evolua.emotional.domain.CheckInRepository;
+import java.time.Instant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -35,7 +36,15 @@ public class CheckInPersistenceAdapter implements CheckInRepository {
         saved.getCreatedAt());
   }
 
-  public Page<CheckIn> findAllByUserId(String userId, Pageable pageable, String search, String mood) {
+  public Page<CheckIn> findAllByUserId(
+      String userId,
+      Pageable pageable,
+      String search,
+      String mood,
+      Integer energyMin,
+      Integer energyMax,
+      Instant from,
+      Instant to) {
     Specification<CheckInEntity> specification =
         Specification.where((root, query, cb) -> cb.equal(root.get("userId"), userId));
 
@@ -54,6 +63,26 @@ public class CheckInPersistenceAdapter implements CheckInRepository {
       var normalizedMood = mood.toLowerCase();
       specification =
           specification.and((root, query, cb) -> cb.equal(cb.lower(root.get("mood")), normalizedMood));
+    }
+
+    if (energyMin != null) {
+      specification =
+          specification.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("energyLevel"), energyMin));
+    }
+
+    if (energyMax != null) {
+      specification =
+          specification.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("energyLevel"), energyMax));
+    }
+
+    if (from != null) {
+      specification =
+          specification.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("createdAt"), from));
+    }
+
+    if (to != null) {
+      specification =
+          specification.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("createdAt"), to));
     }
 
     return repository.findAll(specification, pageable)

@@ -4,6 +4,9 @@ import com.evolua.emotional.application.CheckInService;
 import com.evolua.emotional.infrastructure.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
@@ -49,14 +52,32 @@ public class CheckInController {
       @RequestParam(required = false) String search,
       @RequestParam(required = false) String sortBy,
       @RequestParam(required = false) String sortDir,
-      @RequestParam(required = false) String mood) {
+      @RequestParam(required = false) String mood,
+      @RequestParam(required = false) String energyRange,
+      @RequestParam(required = false) String from,
+      @RequestParam(required = false) String to) {
     var query = new PageQuery(page, size, search, sortBy, sortDir);
+    var normalizedMood = normalize(mood);
+    var normalizedEnergyRange = normalize(energyRange);
+    var fromInstant = parseStartDate(from);
+    var toInstant = parseEndDate(to);
+    validateDateRange(fromInstant, toInstant);
+    var energyBounds = parseEnergyRange(normalizedEnergyRange);
     var filters = new LinkedHashMap<String, Object>();
     if (!query.normalizedSearch().isBlank()) {
       filters.put("search", query.normalizedSearch());
     }
-    if (mood != null && !mood.isBlank()) {
-      filters.put("mood", mood.trim());
+    if (normalizedMood != null) {
+      filters.put("mood", normalizedMood);
+    }
+    if (normalizedEnergyRange != null) {
+      filters.put("energyRange", normalizedEnergyRange);
+    }
+    if (from != null && !from.isBlank()) {
+      filters.put("from", from.trim());
+    }
+    if (to != null && !to.isBlank()) {
+      filters.put("to", to.trim());
     }
 
     var result =
@@ -64,7 +85,11 @@ public class CheckInController {
             currentUserProvider.getCurrentUser().userId(),
             query.pageable(ALLOWED_SORT_FIELDS, DEFAULT_SORT_BY),
             query.normalizedSearch(),
-            mood == null ? null : mood.trim());
+            normalizedMood,
+            energyBounds[0],
+            energyBounds[1],
+            fromInstant,
+            toInstant);
 
     return ResponseEntity.ok(
         ApiResponse.success(
@@ -76,5 +101,56 @@ public class CheckInController {
                 query.effectiveSortBy(ALLOWED_SORT_FIELDS, DEFAULT_SORT_BY),
                 query.normalizedSortDir(),
                 filters)));
+  }
+
+  private String normalize(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+
+    return value.trim();
+  }
+
+  private Instant parseStartDate(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+
+    try {
+      return LocalDate.parse(value.trim()).atStartOfDay().toInstant(ZoneOffset.UTC);
+    } catch (RuntimeException exception) {
+      throw new IllegalArgumentException("from must use yyyy-MM-dd format");
+    }
+  }
+
+  private Instant parseEndDate(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+
+    try {
+      return LocalDate.parse(value.trim()).plusDays(1).atStartOfDay().minusNanos(1).toInstant(ZoneOffset.UTC);
+    } catch (RuntimeException exception) {
+      throw new IllegalArgumentException("to must use yyyy-MM-dd format");
+    }
+  }
+
+  private void validateDateRange(Instant from, Instant to) {
+    if (from != null && to != null && from.isAfter(to)) {
+      throw new IllegalArgumentException("from must be before or equal to to");
+    }
+  }
+
+  private Integer[] parseEnergyRange(String energyRange) {
+    if (energyRange == null) {
+      return new Integer[] {null, null};
+    }
+
+    return switch (energyRange.toLowerCase()) {
+      case "low" -> new Integer[] {1, 3};
+      case "medium" -> new Integer[] {4, 7};
+      case "high" -> new Integer[] {8, 10};
+      default -> throw new IllegalArgumentException("energyRange must be one of: low, medium, high");
+    };
   }
 }

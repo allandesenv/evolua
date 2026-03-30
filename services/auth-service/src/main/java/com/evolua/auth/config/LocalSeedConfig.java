@@ -16,14 +16,39 @@ public class LocalSeedConfig {
   @Bean
   ApplicationRunner authSeedRunner(AuthUserRepository repository, PasswordEncoder passwordEncoder) {
     return args -> {
-      seedUser(repository, passwordEncoder, "clara-rocha", "clara@evolua.local");
-      seedUser(repository, passwordEncoder, "leo-respiro", "leo@evolua.local");
-      seedUser(repository, passwordEncoder, "nina-fluxo", "nina@evolua.local");
+      seedUser(
+          repository,
+          passwordEncoder,
+          "clara-rocha",
+          "clara@evolua.local",
+          List.of("ROLE_ADMIN", "ROLE_PREMIUM", "ROLE_USER"));
+      seedUser(
+          repository,
+          passwordEncoder,
+          "leo-respiro",
+          "leo@evolua.local",
+          List.of("ROLE_USER"));
     };
   }
 
-  private void seedUser(AuthUserRepository repository, PasswordEncoder passwordEncoder, String userId, String email) {
-    if (repository.findByUserId(userId).isPresent() || repository.findByEmail(email).isPresent()) {
+  private void seedUser(
+      AuthUserRepository repository,
+      PasswordEncoder passwordEncoder,
+      String userId,
+      String email,
+      List<String> roles) {
+    var existingUser = repository.findByUserId(userId).orElse(repository.findByEmail(email).orElse(null));
+    if (existingUser != null) {
+      if (!existingUser.roles().equals(roles)) {
+        repository.save(
+            new AuthUser(
+                existingUser.id(),
+                existingUser.userId(),
+                existingUser.email(),
+                existingUser.passwordHash(),
+                roles,
+                existingUser.createdAt()));
+      }
       return;
     }
 
@@ -33,7 +58,7 @@ public class LocalSeedConfig {
             userId,
             email,
             passwordEncoder.encode("123456"),
-            List.of("ROLE_USER"),
+            roles,
             Instant.now()));
   }
 }

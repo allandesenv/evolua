@@ -20,7 +20,15 @@ public class CheckInService {
     return repository.save(new CheckIn(null, userId, mood, reflection, energyLevel, recommendedPractice, Instant.now()));
   }
 
-  public Page<CheckIn> list(String userId, Pageable pageable, String search, String mood) {
-    return repository.findAllByUserId(userId, pageable, search, mood);
+  public Page<CheckIn> list(
+      String userId,
+      Pageable pageable,
+      String search,
+      String mood,
+      Integer energyMin,
+      Integer energyMax,
+      Instant from,
+      Instant to) {
+    return repository.findAllByUserId(userId, pageable, search, mood, energyMin, energyMax, from, to);
   }
 }

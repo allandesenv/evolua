@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "2aaef5c4-8b45-4c40-9e42-75a2692fd6b4",
     "name": "Evolua Backend",
-    "description": "Collection pronta para importacao no Postman com os principais endpoints do backend Evolua.",
+    "description": "Collection pronta para importacao no Postman com os principais endpoints do backend Evolua, incluindo o fluxo social com comunidades.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -15,10 +15,13 @@
     { "key": "chatUrl", "value": "http://localhost:8086" },
     { "key": "subscriptionUrl", "value": "http://localhost:8087" },
     { "key": "notificationUrl", "value": "http://localhost:8088" },
-    { "key": "email", "value": "teste@evolua.local" },
+    { "key": "email", "value": "clara@evolua.local" },
     { "key": "password", "value": "123456" },
     { "key": "accessToken", "value": "" },
-    { "key": "refreshToken", "value": "" }
+    { "key": "refreshToken", "value": "" },
+    { "key": "communityId", "value": "seed-community-1" },
+    { "key": "communitySlug", "value": "geral" },
+    { "key": "recipientId", "value": "leo-respiro" }
   ],
   "item": [
     {
@@ -195,7 +198,7 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": "{{userUrl}}/v1/profiles"
+            "url": "{{userUrl}}/v1/profiles?page=0&size=10&sortBy=createdAt&sortDir=desc"
           }
         }
       ]
@@ -225,7 +228,7 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": "{{contentUrl}}/v1/trails"
+            "url": "{{contentUrl}}/v1/trails?page=0&size=10&sortBy=createdAt&sortDir=desc"
           }
         }
       ]
@@ -255,7 +258,7 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": "{{emotionalUrl}}/v1/check-ins"
+            "url": "{{emotionalUrl}}/v1/check-ins?page=0&size=10&sortBy=createdAt&sortDir=desc"
           }
         }
       ]
@@ -263,6 +266,86 @@
     {
       "name": "Social",
       "item": [
+        {
+          "name": "List Communities",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{socialUrl}}/v1/communities?page=0&size=8&sortBy=createdAt&sortDir=desc"
+          }
+        },
+        {
+          "name": "Discover Communities",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{socialUrl}}/v1/communities?page=0&size=8&joined=false&visibility=PUBLIC&sortBy=createdAt&sortDir=desc"
+          }
+        },
+        {
+          "name": "List Joined Communities",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{socialUrl}}/v1/communities?page=0&size=8&joined=true&sortBy=createdAt&sortDir=desc"
+          }
+        },
+        {
+          "name": "Create Community",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body && body.data) {",
+                  "  pm.collectionVariables.set('communityId', body.data.id || '');",
+                  "  pm.collectionVariables.set('communitySlug', body.data.slug || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grupo de foco leve\",\n  \"slug\": \"grupo-foco-leve\",\n  \"description\": \"Espaco para trocar pequenas estrategias de concentracao com menos rigidez.\",\n  \"visibility\": \"PUBLIC\",\n  \"category\": \"foco\"\n}"
+            },
+            "url": "{{socialUrl}}/v1/communities"
+          }
+        },
+        {
+          "name": "Join Community",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{socialUrl}}/v1/communities/{{communityId}}/join"
+          }
+        },
+        {
+          "name": "Leave Community",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{socialUrl}}/v1/communities/{{communityId}}/leave"
+          }
+        },
         {
           "name": "Create Post",
           "request": {
@@ -273,7 +356,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"content\": \"Primeiro post\",\n  \"community\": \"geral\",\n  \"visibility\": \"PUBLIC\"\n}"
+              "raw": "{\n  \"content\": \"Primeiro post no feed da comunidade.\",\n  \"community\": \"{{communitySlug}}\",\n  \"visibility\": \"PUBLIC\"\n}"
             },
             "url": "{{socialUrl}}/v1/posts"
           }
@@ -285,7 +368,27 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": "{{socialUrl}}/v1/posts"
+            "url": "{{socialUrl}}/v1/posts?page=0&size=4&sortBy=createdAt&sortDir=desc"
+          }
+        },
+        {
+          "name": "List Posts By Community",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{socialUrl}}/v1/posts?page=0&size=4&community={{communitySlug}}&sortBy=createdAt&sortDir=desc"
+          }
+        },
+        {
+          "name": "List Private Posts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{socialUrl}}/v1/posts?page=0&size=4&visibility=PRIVATE&sortBy=createdAt&sortDir=desc"
           }
         }
       ]
@@ -303,7 +406,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"recipientId\": \"user-2\",\n  \"content\": \"Ola\"\n}"
+              "raw": "{\n  \"recipientId\": \"{{recipientId}}\",\n  \"content\": \"Ola\"\n}"
             },
             "url": "{{chatUrl}}/v1/messages"
           }
@@ -315,7 +418,17 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": "{{chatUrl}}/v1/messages"
+            "url": "{{chatUrl}}/v1/messages?page=0&size=10&sortBy=createdAt&sortDir=desc"
+          }
+        },
+        {
+          "name": "List Messages By Recipient",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{chatUrl}}/v1/messages?page=0&size=10&recipientId={{recipientId}}&sortBy=createdAt&sortDir=desc"
           }
         }
       ]
@@ -345,7 +458,7 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": "{{subscriptionUrl}}/v1/subscriptions"
+            "url": "{{subscriptionUrl}}/v1/subscriptions?page=0&size=10&sortBy=createdAt&sortDir=desc"
           }
         }
       ]
@@ -375,7 +488,7 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
-            "url": "{{notificationUrl}}/v1/notifications"
+            "url": "{{notificationUrl}}/v1/notifications?page=0&size=10&sortBy=createdAt&sortDir=desc"
           }
         }
       ]

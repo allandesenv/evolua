@@ -10,3 +10,11 @@ WHERE NOT EXISTS (
     FROM profiles
     WHERE user_id = 'clara-rocha'
 );
+
+INSERT INTO profiles (user_id, display_name, bio, journey_level, premium, created_at)
+SELECT 'leo-respiro', 'Leo Respiro', 'Comecando pela base, com foco em trilhas essenciais e pequenas vitorias do dia.', 1, false, TIMESTAMPTZ '2026-03-21T10:00:00Z'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM profiles
+    WHERE user_id = 'leo-respiro'
+);

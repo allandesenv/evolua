@@ -1,5 +1,7 @@
 package com.evolua.social.config;
 
+import com.evolua.social.infrastructure.persistence.CommunityDocument;
+import com.evolua.social.infrastructure.persistence.CommunityMongoRepository;
 import com.evolua.social.infrastructure.persistence.PostDocument;
 import com.evolua.social.infrastructure.persistence.PostMongoRepository;
 import java.time.Instant;
@@ -13,8 +15,79 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true")
 public class LocalSeedConfig {
   @Bean
-  ApplicationRunner socialSeedRunner(PostMongoRepository repository) {
+  ApplicationRunner socialSeedRunner(CommunityMongoRepository communityRepository, PostMongoRepository repository) {
     return args -> {
+      List.of(
+              community(
+                  "seed-community-1",
+                  "geral",
+                  "Geral",
+                  "Um espaco amplo para compartilhar pequenas vitorias, recomecos e aprendizados do dia.",
+                  "PUBLIC",
+                  "acolhimento",
+                  List.of("clara-rocha", "leo-respiro", "nina-fluxo"),
+                  "2026-03-18T08:00:00Z"),
+              community(
+                  "seed-community-2",
+                  "ansiedade",
+                  "Ansiedade com mais apoio",
+                  "Conversas praticas para desacelerar, nomear gatilhos e recuperar respiracao no meio do dia.",
+                  "PRIVATE",
+                  "emocional",
+                  List.of("clara-rocha", "leo-respiro"),
+                  "2026-03-18T08:10:00Z"),
+              community(
+                  "seed-community-3",
+                  "sono",
+                  "Sono que acolhe",
+                  "Trocas sobre rotina noturna, higiene do sono e pequenos ajustes para descansar melhor.",
+                  "PUBLIC",
+                  "bem-estar",
+                  List.of("clara-rocha", "leo-respiro"),
+                  "2026-03-18T08:20:00Z"),
+              community(
+                  "seed-community-4",
+                  "rotina",
+                  "Rotina sem rigidez",
+                  "Ideias simples para transformar intencao em consistencia sem entrar em autocobranca.",
+                  "PUBLIC",
+                  "habitos",
+                  List.of("clara-rocha", "nina-fluxo"),
+                  "2026-03-18T08:30:00Z"),
+              community(
+                  "seed-community-5",
+                  "mindfulness",
+                  "Mindfulness aplicavel",
+                  "Praticas de presenca para quem vive com a agenda cheia e precisa de recursos curtos.",
+                  "PUBLIC",
+                  "presenca",
+                  List.of("clara-rocha", "nina-fluxo"),
+                  "2026-03-18T08:40:00Z"),
+              community(
+                  "seed-community-6",
+                  "autoconhecimento",
+                  "Autoconhecimento em movimento",
+                  "Reflexoes sobre limites, comparacao, identidade e progresso com mais gentileza.",
+                  "PRIVATE",
+                  "reflexao",
+                  List.of("clara-rocha"),
+                  "2026-03-18T08:50:00Z"),
+              community(
+                  "seed-community-7",
+                  "foco-compassivo",
+                  "Foco compassivo",
+                  "Descoberta para quem quer concentracao com menos rigidez e mais clareza.",
+                  "PUBLIC",
+                  "foco",
+                  List.of("leo-respiro"),
+                  "2026-03-18T09:00:00Z"))
+          .forEach(
+              item -> {
+                if (!communityRepository.existsById(item.getId())) {
+                  communityRepository.save(item);
+                }
+              });
+
       List.of(
               post(
                   "seed-post-1",
@@ -93,6 +166,27 @@ public class LocalSeedConfig {
                 }
               });
     };
+  }
+
+  private CommunityDocument community(
+      String id,
+      String slug,
+      String name,
+      String description,
+      String visibility,
+      String category,
+      List<String> memberIds,
+      String createdAt) {
+    CommunityDocument document = new CommunityDocument();
+    document.setId(id);
+    document.setSlug(slug);
+    document.setName(name);
+    document.setDescription(description);
+    document.setVisibility(visibility);
+    document.setCategory(category);
+    document.setMemberIds(memberIds);
+    document.setCreatedAt(Instant.parse(createdAt));
+    return document;
   }
 
   private PostDocument post(

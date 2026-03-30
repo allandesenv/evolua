@@ -78,8 +78,8 @@ docker compose ps
 
 O ambiente local tambem sobe com seeds idempotentes de primeira experiencia:
 
-- login seed: `clara@evolua.local`
-- senha seed: `123456`
+- admin seed: `clara@evolua.local / 123456`
+- usuario gratuito seed: `leo@evolua.local / 123456`
 - perfil, trilhas, check-ins, feed, conversas e notificacoes iniciais
 
 Logs consolidados:
@@ -134,6 +134,11 @@ curl -X POST http://localhost:8081/v1/public/auth/login ^
   -H "Content-Type: application/json" ^
   -d "{\"email\":\"clara@evolua.local\",\"password\":\"123456\"}"
 ```
+
+Perfis iniciais:
+
+- `clara@evolua.local / 123456`: administrador com acesso premium e permissao para criar trilhas
+- `leo@evolua.local / 123456`: usuario gratuito com acesso apenas a trilhas essenciais
 
 Comunidades seed usadas no feed:
 
@@ -209,7 +214,7 @@ curl http://localhost:8082/v1/profiles ^
   -H "Authorization: Bearer SEU_ACCESS_TOKEN"
 ```
 
-### 5. Criar trilha
+### 5. Criar trilha como admin
 
 ```bash
 curl -X POST http://localhost:8083/v1/trails ^
@@ -323,6 +328,11 @@ Falha de autenticacao:
 
 - gere um novo token via `/v1/public/auth/login`
 - envie `Authorization: Bearer <token>`
+
+Erro `403` ao criar trilha:
+
+- confirme que o token pertence ao admin `clara@evolua.local`
+- usuarios gratuitos nao podem criar trilhas
 
 Erro de banco:
 
