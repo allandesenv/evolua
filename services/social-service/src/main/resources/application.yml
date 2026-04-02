@@ -1,0 +1,24 @@
+server:
+  port: ${SERVER_PORT:8085}
+spring:
+  application:
+    name: social-service
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/evolua}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+app:
+  seed:
+    enabled: ${APP_SEED_ENABLED:false}
+  cors:
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*}
+  security:
+    jwt:
+      secret: ${APP_SECURITY_JWT_SECRET:change-this-secret-before-production-change-this-secret}

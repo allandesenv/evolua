@@ -1,0 +1,1 @@
+package com.evolua.subscription.interfaces.rest; import com.evolua.subscription.domain.Subscription; import org.mapstruct.Mapper; @Mapper(componentModel = "spring") public interface SubscriptionMapper { SubscriptionResponse toResponse(Subscription item); }

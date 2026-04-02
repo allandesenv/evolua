@@ -1,0 +1,1 @@
+package com.evolua.social.interfaces.rest; public record PostRequest(@jakarta.validation.constraints.NotBlank String content, @jakarta.validation.constraints.NotBlank String community, @jakarta.validation.constraints.NotBlank String visibility) { }

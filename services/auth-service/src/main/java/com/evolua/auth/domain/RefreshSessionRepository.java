@@ -1,0 +1,1 @@
+package com.evolua.auth.domain; import java.util.Optional; public interface RefreshSessionRepository { RefreshSession save(RefreshSession session); Optional<RefreshSession> findByRefreshToken(String refreshToken); void revokeAll(String userId); }

@@ -1,0 +1,1 @@
+package com.evolua.user.interfaces.rest; public record ProfileRequest(@jakarta.validation.constraints.NotBlank String displayName, @jakarta.validation.constraints.NotBlank String bio, @jakarta.validation.constraints.NotNull Integer journeyLevel, @jakarta.validation.constraints.NotNull Boolean premium) { }

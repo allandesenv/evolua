@@ -1,0 +1,1 @@
+package com.evolua.emotional.domain; import java.time.Instant; public record CheckIn(Long id, String userId, String mood, String reflection, Integer energyLevel, String recommendedPractice, Instant createdAt) { }

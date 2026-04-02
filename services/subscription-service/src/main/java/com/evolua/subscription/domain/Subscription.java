@@ -1,0 +1,1 @@
+package com.evolua.subscription.domain; import java.time.Instant; public record Subscription(Long id, String userId, String planCode, String status, String billingCycle, Boolean premium, Instant createdAt) { }

@@ -1,0 +1,18 @@
+CREATE TABLE auth_users (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(64) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    roles VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE TABLE refresh_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(64) NOT NULL,
+    refresh_token VARCHAR(1024) NOT NULL UNIQUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    revoked BOOLEAN NOT NULL
+);
+
+
