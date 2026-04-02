@@ -46,6 +46,10 @@ public class LocalSeedConfig {
                 existingUser.userId(),
                 existingUser.email(),
                 existingUser.passwordHash(),
+                existingUser.provider(),
+                existingUser.providerSubject(),
+                existingUser.displayName(),
+                existingUser.avatarUrl(),
                 roles,
                 existingUser.createdAt()));
       }
@@ -58,6 +62,10 @@ public class LocalSeedConfig {
             userId,
             email,
             passwordEncoder.encode("123456"),
+            "LOCAL",
+            null,
+            null,
+            null,
             roles,
             Instant.now()));
   }

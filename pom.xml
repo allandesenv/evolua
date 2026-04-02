@@ -17,6 +17,7 @@
 <module>services/user-service</module>
 <module>services/content-service</module>
 <module>services/emotional-service</module>
+<module>services/ai-service</module>
 <module>services/social-service</module>
 <module>services/chat-service</module>
 <module>services/subscription-service</module>

@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: gateway-service/Dockerfile
     ports: ["8080:8080"]
-    depends_on: [auth-service, user-service, content-service, emotional-service, social-service, chat-service, subscription-service, notification-service]
+    depends_on: [auth-service, user-service, content-service, emotional-service, ai-service, social-service, chat-service, subscription-service, notification-service]
   auth-service:
     build:
       context: .
@@ -17,6 +17,10 @@ services:
       SPRING_DATASOURCE_PASSWORD: evolua
       APP_SEED_ENABLED: "true"
       APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+      APP_OAUTH_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      APP_OAUTH_GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      APP_OAUTH_GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:8080/auth/google/callback}
+      APP_OAUTH_GOOGLE_ALLOWED_FRONTEND_ORIGIN_PATTERNS: ${GOOGLE_ALLOWED_FRONTEND_ORIGIN_PATTERNS:-http://localhost:*,http://127.0.0.1:*}
     depends_on: [postgres-auth]
   user-service:
     build:
@@ -53,7 +57,19 @@ services:
       SPRING_DATASOURCE_USERNAME: evolua
       SPRING_DATASOURCE_PASSWORD: evolua
       APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
-    depends_on: [postgres-emotional]
+      APP_AI_BASE_URL: http://ai-service:8089
+    depends_on: [postgres-emotional, ai-service]
+  ai-service:
+    build:
+      context: .
+      dockerfile: services/ai-service/Dockerfile
+    ports: ["8089:8089"]
+    environment:
+      SERVER_PORT: 8089
+      APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+      APP_AI_EMOTIONAL_BASE_URL: http://emotional-service:8084
+      APP_AI_CONTENT_BASE_URL: http://content-service:8083
+    depends_on: [content-service]
   social-service:
     build:
       context: .

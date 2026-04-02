@@ -1,8 +1,10 @@
 package com.evolua.emotional.interfaces.rest;
 
 import com.evolua.emotional.application.CheckInService;
+import com.evolua.emotional.application.CheckInInsightOrchestrator;
 import com.evolua.emotional.infrastructure.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -21,27 +23,34 @@ public class CheckInController {
   private static final String DEFAULT_SORT_BY = "createdAt";
 
   private final CheckInService service;
+  private final CheckInInsightOrchestrator checkInInsightOrchestrator;
   private final CheckInMapper mapper;
   private final CurrentUserProvider currentUserProvider;
 
-  public CheckInController(CheckInService service, CheckInMapper mapper, CurrentUserProvider currentUserProvider) {
+  public CheckInController(
+      CheckInService service,
+      CheckInInsightOrchestrator checkInInsightOrchestrator,
+      CheckInMapper mapper,
+      CurrentUserProvider currentUserProvider) {
     this.service = service;
+    this.checkInInsightOrchestrator = checkInInsightOrchestrator;
     this.mapper = mapper;
     this.currentUserProvider = currentUserProvider;
   }
 
   @PostMapping
   @Operation(summary = "Create CheckIn")
-  public ResponseEntity<ApiResponse<CheckInResponse>> create(@Valid @RequestBody CheckInRequest request) {
+  public ResponseEntity<ApiResponse<CheckInResponse>> create(
+      @Valid @RequestBody CheckInRequest request, HttpServletRequest httpServletRequest) {
     var created =
-        service.create(
+        checkInInsightOrchestrator.createWithInsight(
+            httpServletRequest.getHeader("Authorization"),
             currentUserProvider.getCurrentUser().userId(),
             request.mood(),
             request.reflection(),
-            request.energyLevel(),
-            request.recommendedPractice());
+            request.energyLevel());
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(ApiResponse.success(201, "Created", mapper.toResponse(created)));
+        .body(ApiResponse.success(201, "Created", mapper.toResponse(created.checkIn(), created.aiInsight())));
   }
 
   @GetMapping

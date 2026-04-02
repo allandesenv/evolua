@@ -17,7 +17,27 @@ public class CheckInService {
 
   public CheckIn create(
       String userId, String mood, String reflection, Integer energyLevel, String recommendedPractice) {
-    return repository.save(new CheckIn(null, userId, mood, reflection, energyLevel, recommendedPractice, Instant.now()));
+    return repository.save(
+        new CheckIn(
+            null,
+            userId,
+            mood,
+            reflection == null ? "" : reflection,
+            energyLevel,
+            recommendedPractice,
+            Instant.now()));
+  }
+
+  public CheckIn updateRecommendedPractice(CheckIn checkIn, String recommendedPractice) {
+    return repository.save(
+        new CheckIn(
+            checkIn.id(),
+            checkIn.userId(),
+            checkIn.mood(),
+            checkIn.reflection(),
+            checkIn.energyLevel(),
+            recommendedPractice,
+            checkIn.createdAt()));
   }
 
   public Page<CheckIn> list(

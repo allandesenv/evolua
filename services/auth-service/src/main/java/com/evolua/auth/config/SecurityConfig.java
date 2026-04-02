@@ -49,7 +49,13 @@ public class SecurityConfig {
                         HttpMethod.POST,
                         "/v1/public/auth/register",
                         "/v1/public/auth/login",
-                        "/v1/public/auth/refresh")
+                        "/v1/public/auth/refresh",
+                        "/v1/public/auth/google/exchange")
+                    .permitAll()
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/v1/public/auth/google/start",
+                        "/auth/google/callback")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/v1/public/health")
                     .permitAll()

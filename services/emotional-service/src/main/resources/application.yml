@@ -22,6 +22,8 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 app:
+  ai:
+    base-url: ${APP_AI_BASE_URL:http://ai-service:8089}
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*}
   security:

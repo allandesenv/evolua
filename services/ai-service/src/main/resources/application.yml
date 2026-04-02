@@ -1,0 +1,23 @@
+server:
+  port: ${SERVER_PORT:8089}
+spring:
+  application:
+    name: ai-service
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+app:
+  cors:
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*}
+  security:
+    jwt:
+      secret: ${APP_SECURITY_JWT_SECRET:change-this-secret-before-production-change-this-secret}
+  ai:
+    provider: ${APP_AI_PROVIDER:heuristic}
+    emotional-base-url: ${APP_AI_EMOTIONAL_BASE_URL:http://emotional-service:8084}
+    content-base-url: ${APP_AI_CONTENT_BASE_URL:http://content-service:8083}

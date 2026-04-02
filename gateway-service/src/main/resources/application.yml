@@ -11,7 +11,7 @@ spring:
             - id: auth-service
               uri: http://auth-service:8081
               predicates:
-                - Path=/v1/auth/**,/v1/public/auth/**
+                - Path=/v1/auth/**,/v1/public/auth/**,/auth/google/callback
             - id: user-service
               uri: http://user-service:8082
               predicates:
