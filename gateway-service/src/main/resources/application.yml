@@ -24,6 +24,10 @@ spring:
               uri: http://emotional-service:8084
               predicates:
                 - Path=/v1/check-ins/**
+            - id: ai-service
+              uri: http://ai-service:8089
+              predicates:
+                - Path=/v1/ai/**
             - id: social-service
               uri: http://social-service:8085
               predicates:

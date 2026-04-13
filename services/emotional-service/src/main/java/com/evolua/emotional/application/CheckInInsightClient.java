@@ -1,6 +1,7 @@
 package com.evolua.emotional.application;
 
 import com.evolua.emotional.domain.CheckIn;
+import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -53,6 +54,9 @@ public class CheckInInsightClient {
           longValue(response.get("suggestedTrailId")),
           stringValue(response.get("suggestedTrailTitle")),
           stringValue(response.get("suggestedTrailReason")),
+          suggestedSpace(response.get("suggestedSpace")),
+          journeyPlan(response.get("journeyPlan")),
+          generatedTrailDraft(response.get("generatedTrailDraft")),
           booleanValue(response.get("fallbackUsed")));
     } catch (Exception exception) {
       return fallback(checkIn);
@@ -69,7 +73,66 @@ public class CheckInInsightClient {
         null,
         null,
         "A recomendacao detalhada ficou indisponivel neste momento, entao mantivemos uma orientacao segura e curta.",
+        null,
+        null,
+        null,
         true);
+  }
+
+  @SuppressWarnings("unchecked")
+  private CheckInAiSuggestedSpace suggestedSpace(Object value) {
+    if (!(value instanceof Map<?, ?> raw)) {
+      return null;
+    }
+    var map = (Map<String, Object>) raw;
+    return new CheckInAiSuggestedSpace(
+        stringValue(map.get("id")),
+        stringValue(map.get("slug")),
+        stringValue(map.get("name")),
+        stringValue(map.get("reason")));
+  }
+
+  @SuppressWarnings("unchecked")
+  private CheckInAiJourneyPlan journeyPlan(Object value) {
+    if (!(value instanceof Map<?, ?> raw)) {
+      return null;
+    }
+    var map = (Map<String, Object>) raw;
+    return new CheckInAiJourneyPlan(
+        stringValue(map.get("journeyKey")),
+        stringValue(map.get("journeyTitle")),
+        stringValue(map.get("phaseLabel")),
+        stringValue(map.get("continuityMode")),
+        stringValue(map.get("summary")),
+        stringValue(map.get("nextCheckInPrompt")));
+  }
+
+  @SuppressWarnings("unchecked")
+  private CheckInAiGeneratedTrailDraft generatedTrailDraft(Object value) {
+    if (!(value instanceof Map<?, ?> raw)) {
+      return null;
+    }
+    var map = (Map<String, Object>) raw;
+    var mediaLinks =
+        map.get("mediaLinks") instanceof List<?> rawLinks
+            ? rawLinks.stream()
+                .filter(Map.class::isInstance)
+                .map(Map.class::cast)
+                .map(
+                    item ->
+                        new CheckInAiGeneratedTrailDraftLink(
+                            stringValue(item.get("label")),
+                            stringValue(item.get("url")),
+                            stringValue(item.get("type"))))
+                .toList()
+            : List.<CheckInAiGeneratedTrailDraftLink>of();
+    return new CheckInAiGeneratedTrailDraft(
+        stringValue(map.get("title")),
+        stringValue(map.get("summary")),
+        stringValue(map.get("content")),
+        stringValue(map.get("category")),
+        stringValue(map.get("sourceStyle")),
+        mediaLinks);
   }
 
   private String stringValue(Object value) {

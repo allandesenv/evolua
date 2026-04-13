@@ -26,10 +26,77 @@ public class TrailService {
       Boolean premium,
       List<TrailMediaLink> mediaLinks) {
     return repository.save(
-        new Trail(null, userId, title, summary, content, category, premium, mediaLinks, Instant.now()));
+        new Trail(
+            null,
+            userId,
+            title,
+            summary,
+            content,
+            category,
+            premium,
+            false,
+            false,
+            false,
+            null,
+            null,
+            mediaLinks,
+            Instant.now()));
   }
 
-  public Page<Trail> list(Pageable pageable, String search, String category, Boolean premium) {
-    return repository.findAll(pageable, search, category, premium);
+  public Page<Trail> list(
+      String userId, Pageable pageable, String search, String category, Boolean premium) {
+    return repository.findAll(userId, pageable, search, category, premium);
+  }
+
+  public Trail currentJourney(String userId) {
+    return repository.findActiveJourneyByUserId(userId);
+  }
+
+  public Trail upsertJourneyTrail(
+      String userId,
+      String title,
+      String summary,
+      String content,
+      String category,
+      List<TrailMediaLink> mediaLinks,
+      String journeyKey,
+      String sourceStyle) {
+    var existing = repository.findActiveJourneyByUserIdAndJourneyKey(userId, journeyKey);
+    if (existing != null) {
+      return repository.save(
+          new Trail(
+              existing.id(),
+              userId,
+              title,
+              summary,
+              content,
+              category,
+              false,
+              true,
+              true,
+              true,
+              journeyKey,
+              sourceStyle,
+              mediaLinks,
+              existing.createdAt()));
+    }
+
+    repository.deactivateActiveJourneys(userId);
+    return repository.save(
+        new Trail(
+            null,
+            userId,
+            title,
+            summary,
+            content,
+            category,
+            false,
+            true,
+            true,
+            true,
+            journeyKey,
+            sourceStyle,
+            mediaLinks,
+            Instant.now()));
   }
 }

@@ -11,6 +11,11 @@ public record TrailResponse(
     String content,
     String category,
     Boolean premium,
+    Boolean privateTrail,
+    Boolean activeJourney,
+    Boolean generatedByAi,
+    String journeyKey,
+    String sourceStyle,
     Boolean accessible,
     List<TrailMediaLinkResponse> mediaLinks,
     Instant createdAt) {}

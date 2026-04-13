@@ -6,11 +6,15 @@ import org.springframework.stereotype.Service;
 public class CheckInInsightOrchestrator {
   private final CheckInService checkInService;
   private final CheckInInsightClient checkInInsightClient;
+  private final JourneyTrailClient journeyTrailClient;
 
   public CheckInInsightOrchestrator(
-      CheckInService checkInService, CheckInInsightClient checkInInsightClient) {
+      CheckInService checkInService,
+      CheckInInsightClient checkInInsightClient,
+      JourneyTrailClient journeyTrailClient) {
     this.checkInService = checkInService;
     this.checkInInsightClient = checkInInsightClient;
+    this.journeyTrailClient = journeyTrailClient;
   }
 
   public CheckInCreationResult createWithInsight(
@@ -23,15 +27,32 @@ public class CheckInInsightOrchestrator {
     var created =
         checkInService.create(userId, mood, reflection, energyLevel, fallbackPractice);
     var aiInsight = checkInInsightClient.generateInsight(authorizationHeader, created);
+    var journeyTrail =
+        journeyTrailClient.upsertCurrentJourney(
+            authorizationHeader, aiInsight.generatedTrailDraft(), aiInsight.journeyPlan());
+    var enrichedInsight =
+        journeyTrail == null
+            ? aiInsight
+            : new CheckInAiInsight(
+                aiInsight.insight(),
+                aiInsight.suggestedAction(),
+                aiInsight.riskLevel(),
+                journeyTrail.id(),
+                journeyTrail.title(),
+                aiInsight.suggestedTrailReason(),
+                aiInsight.suggestedSpace(),
+                aiInsight.journeyPlan(),
+                aiInsight.generatedTrailDraft(),
+                aiInsight.fallbackUsed());
     var finalPractice =
-        aiInsight.suggestedAction() == null || aiInsight.suggestedAction().isBlank()
+        enrichedInsight.suggestedAction() == null || enrichedInsight.suggestedAction().isBlank()
             ? fallbackPractice
-            : aiInsight.suggestedAction();
+            : enrichedInsight.suggestedAction();
     var updatedCheckIn =
         finalPractice.equals(created.recommendedPractice())
             ? created
             : checkInService.updateRecommendedPractice(created, finalPractice);
-    return new CheckInCreationResult(updatedCheckIn, aiInsight);
+    return new CheckInCreationResult(updatedCheckIn, enrichedInsight);
   }
 
   private String fallbackPractice(String mood, Integer energyLevel) {

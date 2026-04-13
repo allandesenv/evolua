@@ -58,6 +58,9 @@ public class CheckInInsightController {
       Long suggestedTrailId,
       String suggestedTrailTitle,
       String suggestedTrailReason,
+      SuggestedSpaceResponse suggestedSpace,
+      JourneyPlanResponse journeyPlan,
+      GeneratedTrailDraftResponse generatedTrailDraft,
       Boolean fallbackUsed) {
     static CheckInInsightResponse from(CheckInInsight insight) {
       return new CheckInInsightResponse(
@@ -67,7 +70,60 @@ public class CheckInInsightController {
           insight.suggestedTrailId(),
           insight.suggestedTrailTitle(),
           insight.suggestedTrailReason(),
+          SuggestedSpaceResponse.from(insight.suggestedSpace()),
+          JourneyPlanResponse.from(insight.journeyPlan()),
+          GeneratedTrailDraftResponse.from(insight.generatedTrailDraft()),
           insight.fallbackUsed());
     }
   }
+
+  public record SuggestedSpaceResponse(String id, String slug, String name, String reason) {
+    static SuggestedSpaceResponse from(com.evolua.ai.application.SuggestedSpace item) {
+      return item == null ? null : new SuggestedSpaceResponse(item.id(), item.slug(), item.name(), item.reason());
+    }
+  }
+
+  public record JourneyPlanResponse(
+      String journeyKey,
+      String journeyTitle,
+      String phaseLabel,
+      String continuityMode,
+      String summary,
+      String nextCheckInPrompt) {
+    static JourneyPlanResponse from(com.evolua.ai.application.JourneyPlan item) {
+      return item == null
+          ? null
+          : new JourneyPlanResponse(
+              item.journeyKey(),
+              item.journeyTitle(),
+              item.phaseLabel(),
+              item.continuityMode(),
+              item.summary(),
+              item.nextCheckInPrompt());
+    }
+  }
+
+  public record GeneratedTrailDraftResponse(
+      String title,
+      String summary,
+      String content,
+      String category,
+      String sourceStyle,
+      java.util.List<GeneratedTrailMediaLinkResponse> mediaLinks) {
+    static GeneratedTrailDraftResponse from(com.evolua.ai.application.GeneratedTrailDraft item) {
+      return item == null
+          ? null
+          : new GeneratedTrailDraftResponse(
+              item.title(),
+              item.summary(),
+              item.content(),
+              item.category(),
+              item.sourceStyle(),
+              item.mediaLinks().stream()
+                  .map(link -> new GeneratedTrailMediaLinkResponse(link.label(), link.url(), link.type()))
+                  .toList());
+    }
+  }
+
+  public record GeneratedTrailMediaLinkResponse(String label, String url, String type) {}
 }

@@ -7,5 +7,6 @@ public interface WellBeingInsightGenerator {
       CurrentCheckInInput currentCheckIn,
       EmotionalContextSnapshot context,
       List<TrailCandidate> candidates,
+      List<SpaceCandidate> spaces,
       List<String> roles);
 }
