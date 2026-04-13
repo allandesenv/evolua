@@ -27,6 +27,36 @@ public interface CheckInMapper {
                 aiInsight.suggestedTrailId(),
                 aiInsight.suggestedTrailTitle(),
                 aiInsight.suggestedTrailReason(),
+                aiInsight.suggestedSpace() == null
+                    ? null
+                    : new CheckInAiSuggestedSpaceResponse(
+                        aiInsight.suggestedSpace().id(),
+                        aiInsight.suggestedSpace().slug(),
+                        aiInsight.suggestedSpace().name(),
+                        aiInsight.suggestedSpace().reason()),
+                aiInsight.journeyPlan() == null
+                    ? null
+                    : new CheckInAiJourneyPlanResponse(
+                        aiInsight.journeyPlan().journeyKey(),
+                        aiInsight.journeyPlan().journeyTitle(),
+                        aiInsight.journeyPlan().phaseLabel(),
+                        aiInsight.journeyPlan().continuityMode(),
+                        aiInsight.journeyPlan().summary(),
+                        aiInsight.journeyPlan().nextCheckInPrompt()),
+                aiInsight.generatedTrailDraft() == null
+                    ? null
+                    : new CheckInAiGeneratedTrailDraftResponse(
+                        aiInsight.generatedTrailDraft().title(),
+                        aiInsight.generatedTrailDraft().summary(),
+                        aiInsight.generatedTrailDraft().content(),
+                        aiInsight.generatedTrailDraft().category(),
+                        aiInsight.generatedTrailDraft().sourceStyle(),
+                        aiInsight.generatedTrailDraft().mediaLinks().stream()
+                            .map(
+                                link ->
+                                    new CheckInAiGeneratedTrailDraftLinkResponse(
+                                        link.label(), link.url(), link.type()))
+                            .toList()),
                 aiInsight.fallbackUsed()),
         item.createdAt());
   }

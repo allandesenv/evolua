@@ -6,6 +6,7 @@ import com.evolua.content.domain.TrailRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -33,13 +34,21 @@ public class TrailPersistenceAdapter implements TrailRepository {
     entity.setContent(item.content());
     entity.setCategory(item.category());
     entity.setPremium(item.premium());
+    entity.setPrivateTrail(Boolean.TRUE.equals(item.privateTrail()));
+    entity.setActiveJourney(Boolean.TRUE.equals(item.activeJourney()));
+    entity.setGeneratedByAi(Boolean.TRUE.equals(item.generatedByAi()));
+    entity.setJourneyKey(item.journeyKey());
+    entity.setSourceStyle(item.sourceStyle());
     entity.setMediaLinks(serializeMediaLinks(item.mediaLinks()));
     entity.setCreatedAt(item.createdAt());
     return toDomain(repository.save(entity));
   }
 
-  public Page<Trail> findAll(Pageable pageable, String search, String category, Boolean premium) {
+  public Page<Trail> findAll(
+      String userId, Pageable pageable, String search, String category, Boolean premium) {
     Specification<TrailEntity> specification = Specification.where(null);
+
+    specification = specification.and((root, query, cb) -> cb.isFalse(root.get("privateTrail")));
 
     if (search != null && !search.isBlank()) {
       var normalized = "%" + search.toLowerCase() + "%";
@@ -67,6 +76,30 @@ public class TrailPersistenceAdapter implements TrailRepository {
     return repository.findAll(specification, pageable).map(this::toDomain);
   }
 
+  @Override
+  public Trail findActiveJourneyByUserId(String userId) {
+    return repository.findFirstByUserIdAndActiveJourneyTrueOrderByCreatedAtDesc(userId)
+        .map(this::toDomain)
+        .orElse(null);
+  }
+
+  @Override
+  public Trail findActiveJourneyByUserIdAndJourneyKey(String userId, String journeyKey) {
+    if (journeyKey == null || journeyKey.isBlank()) {
+      return null;
+    }
+
+    return repository.findFirstByUserIdAndJourneyKeyAndActiveJourneyTrueOrderByCreatedAtDesc(
+            userId, journeyKey)
+        .map(this::toDomain)
+        .orElse(null);
+  }
+
+  @Override
+  public void deactivateActiveJourneys(String userId) {
+    repository.deactivateActiveJourneys(userId);
+  }
+
   private Trail toDomain(TrailEntity saved) {
     return new Trail(
         saved.getId(),
@@ -76,6 +109,11 @@ public class TrailPersistenceAdapter implements TrailRepository {
         saved.getContent() == null || saved.getContent().isBlank() ? saved.getDescription() : saved.getContent(),
         saved.getCategory(),
         saved.getPremium(),
+        Optional.ofNullable(saved.getPrivateTrail()).orElse(Boolean.FALSE),
+        Optional.ofNullable(saved.getActiveJourney()).orElse(Boolean.FALSE),
+        Optional.ofNullable(saved.getGeneratedByAi()).orElse(Boolean.FALSE),
+        saved.getJourneyKey(),
+        saved.getSourceStyle(),
         deserializeMediaLinks(saved.getMediaLinks()),
         saved.getCreatedAt());
   }

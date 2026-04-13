@@ -82,6 +82,7 @@ public class TrailController {
     var hasPremiumAccess = hasPremiumAccess(currentUser.roles());
     var result =
         service.list(
+            currentUser.userId(),
             query.pageable(ALLOWED_SORT_FIELDS, DEFAULT_SORT_BY),
             query.normalizedSearch(),
             category == null ? null : category.trim(),
@@ -97,6 +98,38 @@ public class TrailController {
                 query.effectiveSortBy(ALLOWED_SORT_FIELDS, DEFAULT_SORT_BY),
                 query.normalizedSortDir(),
                 filters)));
+  }
+
+  @GetMapping("/journey/current")
+  @Operation(summary = "Current private AI journey trail")
+  public ResponseEntity<ApiResponse<TrailResponse>> currentJourney() {
+    var currentUser = currentUserProvider.getCurrentUser();
+    var trail = service.currentJourney(currentUser.userId());
+    if (trail == null) {
+      return ResponseEntity.ok(ApiResponse.success(200, "Current journey", null));
+    }
+
+    return ResponseEntity.ok(
+        ApiResponse.success(200, "Current journey", toResponse(trail, true)));
+  }
+
+  @PostMapping("/internal/journey/current")
+  @Operation(summary = "Upsert current private AI journey trail")
+  public ResponseEntity<ApiResponse<TrailResponse>> upsertCurrentJourney(
+      @Valid @RequestBody JourneyTrailRequest request) {
+    var currentUser = currentUserProvider.getCurrentUser();
+    var saved =
+        service.upsertJourneyTrail(
+            currentUser.userId(),
+            request.title().trim(),
+            request.summary().trim(),
+            request.content().trim(),
+            request.category().trim(),
+            normalizeMediaLinks(request.mediaLinks()),
+            request.journeyKey().trim(),
+            request.sourceStyle() == null ? null : request.sourceStyle().trim());
+    return ResponseEntity.ok(
+        ApiResponse.success(200, "Current journey updated", toResponse(saved, true)));
   }
 
   private void validateRequest(TrailRequest request) {
@@ -157,6 +190,11 @@ public class TrailController {
         accessible ? item.content() : null,
         item.category(),
         item.premium(),
+        item.privateTrail(),
+        item.activeJourney(),
+        item.generatedByAi(),
+        item.journeyKey(),
+        item.sourceStyle(),
         accessible,
         accessible
             ? item.mediaLinks().stream()
@@ -173,4 +211,13 @@ public class TrailController {
   private boolean hasPremiumAccess(List<String> roles) {
     return isAdmin(roles) || roles.contains("ROLE_PREMIUM");
   }
+
+  public record JourneyTrailRequest(
+      @jakarta.validation.constraints.NotBlank String title,
+      @jakarta.validation.constraints.NotBlank String summary,
+      @jakarta.validation.constraints.NotBlank String content,
+      @jakarta.validation.constraints.NotBlank String category,
+      @jakarta.validation.constraints.NotBlank String journeyKey,
+      String sourceStyle,
+      List<@Valid TrailMediaLinkRequest> mediaLinks) {}
 }

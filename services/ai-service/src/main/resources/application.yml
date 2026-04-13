@@ -21,3 +21,12 @@ app:
     provider: ${APP_AI_PROVIDER:heuristic}
     emotional-base-url: ${APP_AI_EMOTIONAL_BASE_URL:http://emotional-service:8084}
     content-base-url: ${APP_AI_CONTENT_BASE_URL:http://content-service:8083}
+    social-base-url: ${APP_AI_SOCIAL_BASE_URL:http://social-service:8085}
+    base-url: ${APP_AI_BASE_URL:https://api.openai.com/v1}
+    api-key: ${APP_AI_API_KEY:}
+    model: ${APP_AI_MODEL:}
+    language: ${APP_AI_LANGUAGE:pt-BR}
+    max-tokens: ${APP_AI_MAX_TOKENS:800}
+    temperature: ${APP_AI_TEMPERATURE:0.3}
+    timeout-seconds: ${APP_AI_TIMEOUT_SECONDS:15}
+    fallback-enabled: ${APP_AI_FALLBACK_ENABLED:true}

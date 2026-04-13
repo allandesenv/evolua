@@ -6,5 +6,12 @@ import org.springframework.data.domain.Pageable;
 public interface TrailRepository {
   Trail save(Trail item);
 
-  Page<Trail> findAll(Pageable pageable, String search, String category, Boolean premium);
+  Page<Trail> findAll(
+      String userId, Pageable pageable, String search, String category, Boolean premium);
+
+  Trail findActiveJourneyByUserId(String userId);
+
+  Trail findActiveJourneyByUserIdAndJourneyKey(String userId, String journeyKey);
+
+  void deactivateActiveJourneys(String userId);
 }

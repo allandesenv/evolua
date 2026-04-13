@@ -24,6 +24,11 @@ public class TrailEntity {
 
   private String category;
   private Boolean premium;
+  private Boolean privateTrail;
+  private Boolean activeJourney;
+  private Boolean generatedByAi;
+  private String journeyKey;
+  private String sourceStyle;
 
   @Column(name = "media_links", nullable = false, columnDefinition = "TEXT")
   private String mediaLinks;
@@ -92,6 +97,46 @@ public class TrailEntity {
 
   public void setPremium(Boolean premium) {
     this.premium = premium;
+  }
+
+  public Boolean getPrivateTrail() {
+    return privateTrail;
+  }
+
+  public void setPrivateTrail(Boolean privateTrail) {
+    this.privateTrail = privateTrail;
+  }
+
+  public Boolean getActiveJourney() {
+    return activeJourney;
+  }
+
+  public void setActiveJourney(Boolean activeJourney) {
+    this.activeJourney = activeJourney;
+  }
+
+  public Boolean getGeneratedByAi() {
+    return generatedByAi;
+  }
+
+  public void setGeneratedByAi(Boolean generatedByAi) {
+    this.generatedByAi = generatedByAi;
+  }
+
+  public String getJourneyKey() {
+    return journeyKey;
+  }
+
+  public void setJourneyKey(String journeyKey) {
+    this.journeyKey = journeyKey;
+  }
+
+  public String getSourceStyle() {
+    return sourceStyle;
+  }
+
+  public void setSourceStyle(String sourceStyle) {
+    this.sourceStyle = sourceStyle;
   }
 
   public String getMediaLinks() {

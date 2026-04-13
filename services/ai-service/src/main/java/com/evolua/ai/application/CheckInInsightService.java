@@ -7,14 +7,17 @@ import org.springframework.stereotype.Service;
 public class CheckInInsightService {
   private final EmotionalContextClient emotionalContextClient;
   private final ContentCatalogClient contentCatalogClient;
+  private final SocialSpaceCatalogClient socialSpaceCatalogClient;
   private final WellBeingInsightGenerator insightGenerator;
 
   public CheckInInsightService(
       EmotionalContextClient emotionalContextClient,
       ContentCatalogClient contentCatalogClient,
+      SocialSpaceCatalogClient socialSpaceCatalogClient,
       WellBeingInsightGenerator insightGenerator) {
     this.emotionalContextClient = emotionalContextClient;
     this.contentCatalogClient = contentCatalogClient;
+    this.socialSpaceCatalogClient = socialSpaceCatalogClient;
     this.insightGenerator = insightGenerator;
   }
 
@@ -23,7 +26,8 @@ public class CheckInInsightService {
     try {
       var context = emotionalContextClient.fetchRecentContext(authorizationHeader);
       var candidates = contentCatalogClient.fetchTrailCandidates(authorizationHeader);
-      return insightGenerator.generate(currentCheckIn, context, candidates, currentUser.roles());
+      var spaces = socialSpaceCatalogClient.fetchSpaceCandidates(authorizationHeader);
+      return insightGenerator.generate(currentCheckIn, context, candidates, spaces, currentUser.roles());
     } catch (Exception exception) {
       return new CheckInInsight(
           "Registramos seu check-in e mantivemos uma orientacao segura para agora.",
@@ -32,6 +36,9 @@ public class CheckInInsightService {
           null,
           null,
           "A recomendacao detalhada ficou indisponivel neste momento, entao priorizamos um proximo passo simples.",
+          null,
+          null,
+          null,
           true);
     }
   }

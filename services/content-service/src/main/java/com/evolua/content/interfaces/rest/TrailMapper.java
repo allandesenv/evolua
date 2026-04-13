@@ -14,6 +14,11 @@ public interface TrailMapper {
         item.content(),
         item.category(),
         item.premium(),
+        item.privateTrail(),
+        item.activeJourney(),
+        item.generatedByAi(),
+        item.journeyKey(),
+        item.sourceStyle(),
         true,
         item.mediaLinks().stream()
             .map(link -> new TrailMediaLinkResponse(link.label(), link.url(), link.type()))
