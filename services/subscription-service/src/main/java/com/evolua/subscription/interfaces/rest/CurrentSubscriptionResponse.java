@@ -1,8 +1,8 @@
-package com.evolua.subscription.domain;
+package com.evolua.subscription.interfaces.rest;
 
 import java.time.Instant;
 
-public record Subscription(
+public record CurrentSubscriptionResponse(
     Long id,
     String userId,
     String planCode,
@@ -10,9 +10,6 @@ public record Subscription(
     String billingCycle,
     Boolean premium,
     String provider,
-    String providerCustomerId,
-    String providerPaymentId,
-    String providerSubscriptionId,
     Instant currentPeriodEndsAt,
     Instant canceledAt,
     Instant createdAt,

@@ -15,26 +15,30 @@ public class SubscriptionPersistenceAdapter implements SubscriptionRepository {
     this.repository = repository;
   }
 
+  @Override
   public Subscription save(Subscription item) {
-    SubscriptionEntity entity = new SubscriptionEntity();
+    SubscriptionEntity entity =
+        item.id() == null
+            ? new SubscriptionEntity()
+            : repository.findById(item.id()).orElseGet(SubscriptionEntity::new);
     entity.setId(item.id());
     entity.setUserId(item.userId());
     entity.setPlanCode(item.planCode());
     entity.setStatus(item.status());
     entity.setBillingCycle(item.billingCycle());
     entity.setPremium(item.premium());
+    entity.setProvider(item.provider());
+    entity.setProviderCustomerId(item.providerCustomerId());
+    entity.setProviderPaymentId(item.providerPaymentId());
+    entity.setProviderSubscriptionId(item.providerSubscriptionId());
+    entity.setCurrentPeriodEndsAt(item.currentPeriodEndsAt());
+    entity.setCanceledAt(item.canceledAt());
     entity.setCreatedAt(item.createdAt());
-    SubscriptionEntity saved = repository.save(entity);
-    return new Subscription(
-        saved.getId(),
-        saved.getUserId(),
-        saved.getPlanCode(),
-        saved.getStatus(),
-        saved.getBillingCycle(),
-        saved.getPremium(),
-        saved.getCreatedAt());
+    entity.setUpdatedAt(item.updatedAt());
+    return toDomain(repository.save(entity));
   }
 
+  @Override
   public Page<Subscription> findAllByUserId(
       String userId, Pageable pageable, String search, String status, Boolean premium) {
     Specification<SubscriptionEntity> specification =
@@ -54,23 +58,37 @@ public class SubscriptionPersistenceAdapter implements SubscriptionRepository {
     if (status != null && !status.isBlank()) {
       var normalizedStatus = status.toLowerCase();
       specification =
-          specification.and((root, query, cb) -> cb.equal(cb.lower(root.get("status")), normalizedStatus));
+          specification.and(
+              (root, query, cb) -> cb.equal(cb.lower(root.get("status")), normalizedStatus));
     }
 
     if (premium != null) {
       specification = specification.and((root, query, cb) -> cb.equal(root.get("premium"), premium));
     }
 
-    return repository.findAll(specification, pageable)
-        .map(
-            saved ->
-                new Subscription(
-                    saved.getId(),
-                    saved.getUserId(),
-                    saved.getPlanCode(),
-                    saved.getStatus(),
-                    saved.getBillingCycle(),
-                    saved.getPremium(),
-                    saved.getCreatedAt()));
+    return repository.findAll(specification, pageable).map(this::toDomain);
+  }
+
+  @Override
+  public Subscription findCurrentByUserId(String userId) {
+    return repository.findFirstByUserIdOrderByUpdatedAtDescCreatedAtDesc(userId).map(this::toDomain).orElse(null);
+  }
+
+  private Subscription toDomain(SubscriptionEntity saved) {
+    return new Subscription(
+        saved.getId(),
+        saved.getUserId(),
+        saved.getPlanCode(),
+        saved.getStatus(),
+        saved.getBillingCycle(),
+        saved.getPremium(),
+        saved.getProvider(),
+        saved.getProviderCustomerId(),
+        saved.getProviderPaymentId(),
+        saved.getProviderSubscriptionId(),
+        saved.getCurrentPeriodEndsAt(),
+        saved.getCanceledAt(),
+        saved.getCreatedAt(),
+        saved.getUpdatedAt());
   }
 }

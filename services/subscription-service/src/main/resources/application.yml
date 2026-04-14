@@ -27,3 +27,12 @@ app:
   security:
     jwt:
       secret: ${APP_SECURITY_JWT_SECRET:change-this-secret-before-production-change-this-secret}
+  billing:
+    provider: ${APP_BILLING_PROVIDER:mercadopago}
+    frontend-base-url: ${APP_BILLING_FRONTEND_BASE_URL:http://localhost:3000}
+    public-base-url: ${APP_BILLING_PUBLIC_BASE_URL:http://localhost:8087}
+    internal-token: ${APP_BILLING_INTERNAL_TOKEN:change-me-internal-token}
+    mercado-pago:
+      base-url: ${MERCADO_PAGO_BASE_URL:https://api.mercadopago.com}
+      access-token: ${MERCADO_PAGO_ACCESS_TOKEN:}
+      webhook-secret: ${MERCADO_PAGO_WEBHOOK_SECRET:}
