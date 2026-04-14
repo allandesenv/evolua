@@ -11,11 +11,11 @@ import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/v1/notifications")
 public class NotificationJobController {
-  private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("channel", "message", "createdAt");
+  private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("title", "message", "type", "createdAt");
   private static final String DEFAULT_SORT_BY = "createdAt";
 
   private final NotificationJobService service;
@@ -26,30 +26,26 @@ public class NotificationJobController {
     this.currentUserProvider = currentUserProvider;
   }
 
-  @PostMapping
-  @Operation(summary = "Create notification")
-  public ResponseEntity<ApiResponse<NotificationJob>> create(@Valid @RequestBody NotificationJobRequest request) {
-    NotificationJob created =
-        service.create(currentUserProvider.getCurrentUser().userId(), request.channel(), request.message());
-    return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(201, "Created", created));
-  }
-
-  @GetMapping
-  @Operation(summary = "List notifications")
+  @GetMapping("/v1/notifications")
+  @Operation(summary = "List notifications for current user")
   public ResponseEntity<ApiResponse<PageResponse<NotificationJob>>> list(
       @RequestParam(required = false) Integer page,
       @RequestParam(required = false) Integer size,
       @RequestParam(required = false) String search,
       @RequestParam(required = false) String sortBy,
       @RequestParam(required = false) String sortDir,
-      @RequestParam(required = false) String channel) {
+      @RequestParam(required = false) String type,
+      @RequestParam(required = false) Boolean unreadOnly) {
     var query = new PageQuery(page, size, search, sortBy, sortDir);
     var filters = new LinkedHashMap<String, Object>();
     if (!query.normalizedSearch().isBlank()) {
       filters.put("search", query.normalizedSearch());
     }
-    if (channel != null && !channel.isBlank()) {
-      filters.put("channel", channel.trim().toUpperCase());
+    if (type != null && !type.isBlank()) {
+      filters.put("type", type.trim().toUpperCase());
+    }
+    if (unreadOnly != null) {
+      filters.put("unreadOnly", unreadOnly);
     }
 
     var result =
@@ -57,7 +53,8 @@ public class NotificationJobController {
             currentUserProvider.getCurrentUser().userId(),
             query.pageable(ALLOWED_SORT_FIELDS, DEFAULT_SORT_BY),
             query.normalizedSearch(),
-            channel == null ? null : channel.trim().toUpperCase());
+            type,
+            unreadOnly);
 
     return ResponseEntity.ok(
         ApiResponse.success(
@@ -76,5 +73,58 @@ public class NotificationJobController {
                 filters)));
   }
 
-  public record NotificationJobRequest(@NotBlank String channel, @NotBlank String message) {}
+  @GetMapping("/v1/notifications/unread-count")
+  @Operation(summary = "Unread notifications count")
+  public ResponseEntity<ApiResponse<UnreadCountResponse>> unreadCount() {
+    var userId = currentUserProvider.getCurrentUser().userId();
+    return ResponseEntity.ok(
+        ApiResponse.success(200, "Counted", new UnreadCountResponse(service.countUnread(userId))));
+  }
+
+  @PostMapping("/v1/notifications/{notificationId}/read")
+  @Operation(summary = "Mark notification as read")
+  public ResponseEntity<ApiResponse<NotificationJob>> markAsRead(@PathVariable String notificationId) {
+    var userId = currentUserProvider.getCurrentUser().userId();
+    var updated = service.markAsRead(userId, notificationId);
+    return ResponseEntity.ok(ApiResponse.success(200, "Updated", updated));
+  }
+
+  @PostMapping("/v1/notifications/read-all")
+  @Operation(summary = "Mark all notifications as read")
+  public ResponseEntity<ApiResponse<ReadAllResponse>> markAllAsRead() {
+    var userId = currentUserProvider.getCurrentUser().userId();
+    return ResponseEntity.ok(
+        ApiResponse.success(200, "Updated", new ReadAllResponse(service.markAllAsRead(userId))));
+  }
+
+  @PostMapping("/v1/admin/notifications")
+  @Operation(summary = "Create notification manually as admin")
+  public ResponseEntity<ApiResponse<NotificationJob>> createAdmin(
+      @Valid @RequestBody AdminNotificationRequest request) {
+    var currentUser = currentUserProvider.getCurrentUser();
+    if (!service.isAdmin(currentUser.roles())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only administrators can send notifications");
+    }
+
+    var created =
+        service.createAdmin(
+            currentUser.userId(),
+            request.targetUserId(),
+            request.type(),
+            request.title(),
+            request.message(),
+            request.actionTarget());
+    return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(201, "Created", created));
+  }
+
+  public record AdminNotificationRequest(
+      @NotBlank String targetUserId,
+      @NotBlank String type,
+      @NotBlank String title,
+      @NotBlank String message,
+      String actionTarget) {}
+
+  public record UnreadCountResponse(long unreadCount) {}
+
+  public record ReadAllResponse(long updatedCount) {}
 }

@@ -1,1 +1,0 @@
-package com.evolua.subscription.interfaces.rest; import java.time.Instant; public record SubscriptionResponse(Long id, String userId, String planCode, String status, String billingCycle, Boolean premium, Instant createdAt) { }
