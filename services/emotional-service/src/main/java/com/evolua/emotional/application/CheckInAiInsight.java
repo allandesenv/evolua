@@ -7,4 +7,7 @@ public record CheckInAiInsight(
     Long suggestedTrailId,
     String suggestedTrailTitle,
     String suggestedTrailReason,
+    CheckInAiSuggestedSpace suggestedSpace,
+    CheckInAiJourneyPlan journeyPlan,
+    CheckInAiGeneratedTrailDraft generatedTrailDraft,
     Boolean fallbackUsed) {}

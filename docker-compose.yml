@@ -58,6 +58,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: evolua
       APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
       APP_AI_BASE_URL: http://ai-service:8089
+      APP_CONTENT_BASE_URL: http://content-service:8083
     depends_on: [postgres-emotional, ai-service]
   ai-service:
     build:
@@ -67,8 +68,18 @@ services:
     environment:
       SERVER_PORT: 8089
       APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+      APP_AI_PROVIDER: ${AI_PROVIDER:-heuristic}
       APP_AI_EMOTIONAL_BASE_URL: http://emotional-service:8084
       APP_AI_CONTENT_BASE_URL: http://content-service:8083
+      APP_AI_SOCIAL_BASE_URL: http://social-service:8085
+      APP_AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      APP_AI_API_KEY: ${AI_API_KEY:-}
+      APP_AI_MODEL: ${AI_MODEL:-}
+      APP_AI_LANGUAGE: ${AI_LANGUAGE:-pt-BR}
+      APP_AI_MAX_TOKENS: ${AI_MAX_TOKENS:-800}
+      APP_AI_TEMPERATURE: ${AI_TEMPERATURE:-0.3}
+      APP_AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-15}
+      APP_AI_FALLBACK_ENABLED: ${AI_FALLBACK_ENABLED:-true}
     depends_on: [content-service]
   social-service:
     build:

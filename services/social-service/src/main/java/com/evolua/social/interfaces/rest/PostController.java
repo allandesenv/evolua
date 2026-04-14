@@ -49,7 +49,8 @@ public class PostController {
       @RequestParam(required = false) String sortBy,
       @RequestParam(required = false) String sortDir,
       @RequestParam(required = false) String community,
-      @RequestParam(required = false) String visibility) {
+      @RequestParam(required = false) String visibility,
+      @RequestParam(required = false) Boolean mine) {
     var query = new PageQuery(page, size, search, sortBy, sortDir);
     var filters = new LinkedHashMap<String, Object>();
     if (!query.normalizedSearch().isBlank()) {
@@ -61,6 +62,9 @@ public class PostController {
     if (visibility != null && !visibility.isBlank()) {
       filters.put("visibility", visibility.trim().toUpperCase());
     }
+    if (mine != null) {
+      filters.put("mine", mine);
+    }
 
     var result =
         service.list(
@@ -68,7 +72,8 @@ public class PostController {
             query.pageable(ALLOWED_SORT_FIELDS, DEFAULT_SORT_BY),
             query.normalizedSearch(),
             community == null ? null : community.trim(),
-            visibility == null ? null : visibility.trim().toUpperCase());
+            visibility == null ? null : visibility.trim().toUpperCase(),
+            mine);
 
     return ResponseEntity.ok(
         ApiResponse.success(

@@ -58,6 +58,45 @@ public class ContentCatalogClient {
   }
 
   @SuppressWarnings("unchecked")
+  public JourneyTrailSnapshot fetchCurrentJourney(String authorizationHeader) {
+    var uri =
+        UriComponentsBuilder.fromUriString(contentBaseUrl).path("/v1/trails/journey/current").build().toUri();
+
+    Map<String, Object> payload =
+        restClient
+            .get()
+            .uri(uri)
+            .header(HttpHeaders.AUTHORIZATION, authorizationHeader)
+            .retrieve()
+            .body(Map.class);
+
+    var data = payload == null ? Map.<String, Object>of() : castMap(payload.get("data"));
+    if (data.isEmpty()) {
+      return null;
+    }
+
+    var links =
+        (data.get("mediaLinks") instanceof List<?> rawItems ? rawItems : List.of()).stream()
+            .map(this::castMap)
+            .map(
+                item ->
+                    new GeneratedTrailMediaLink(
+                        stringValue(item.get("label")),
+                        stringValue(item.get("url")),
+                        stringValue(item.get("type"))))
+            .toList();
+
+    return new JourneyTrailSnapshot(
+        longValue(data.get("id")),
+        stringValue(data.get("title")),
+        stringValue(data.get("summary")),
+        stringValue(data.get("content")),
+        stringValue(data.get("category")),
+        stringValue(data.get("sourceStyle")),
+        links);
+  }
+
+  @SuppressWarnings("unchecked")
   private Map<String, Object> castMap(Object value) {
     return value instanceof Map<?, ?> map ? (Map<String, Object>) map : Map.of();
   }

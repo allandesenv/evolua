@@ -7,5 +7,5 @@ public interface PostRepository {
   Post save(Post item);
 
   Page<Post> findAllByUserId(
-      String userId, Pageable pageable, String search, String community, String visibility);
+      String userId, Pageable pageable, String search, String community, String visibility, Boolean mine);
 }

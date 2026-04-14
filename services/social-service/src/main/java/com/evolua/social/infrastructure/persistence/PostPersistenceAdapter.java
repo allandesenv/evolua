@@ -34,8 +34,18 @@ public class PostPersistenceAdapter implements PostRepository {
   }
 
   public Page<Post> findAllByUserId(
-      String userId, Pageable pageable, String search, String community, String visibility) {
-    Query query = new Query().addCriteria(Criteria.where("userId").is(userId));
+      String userId, Pageable pageable, String search, String community, String visibility, Boolean mine) {
+    Query query = new Query();
+
+    if (Boolean.TRUE.equals(mine)) {
+      query.addCriteria(Criteria.where("userId").is(userId));
+    } else {
+      query.addCriteria(
+          new Criteria()
+              .orOperator(
+                  Criteria.where("visibility").is("PUBLIC"),
+                  Criteria.where("userId").is(userId)));
+    }
 
     if (search != null && !search.isBlank()) {
       String regex = Pattern.quote(search);
@@ -51,7 +61,17 @@ public class PostPersistenceAdapter implements PostRepository {
     }
 
     if (visibility != null && !visibility.isBlank()) {
-      query.addCriteria(Criteria.where("visibility").is(visibility));
+      if (Boolean.TRUE.equals(mine)) {
+        query.addCriteria(Criteria.where("visibility").is(visibility));
+      } else if ("PRIVATE".equalsIgnoreCase(visibility)) {
+        query.addCriteria(
+            new Criteria()
+                .andOperator(
+                    Criteria.where("userId").is(userId),
+                    Criteria.where("visibility").is("PRIVATE")));
+      } else {
+        query.addCriteria(Criteria.where("visibility").is(visibility));
+      }
     }
 
     long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), PostDocument.class);
