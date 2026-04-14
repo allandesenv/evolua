@@ -1,1 +1,49 @@
-package com.evolua.notification.interfaces.rest; import java.time.Instant; import java.util.List; import org.springframework.http.HttpStatus; import org.springframework.http.ResponseEntity; import org.springframework.web.bind.MethodArgumentNotValidException; import org.springframework.web.bind.annotation.ExceptionHandler; import org.springframework.web.bind.annotation.RestControllerAdvice; @RestControllerAdvice public class GlobalExceptionHandler { @ExceptionHandler(IllegalArgumentException.class) public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException exception) { return ResponseEntity.badRequest().body(new ErrorResponse(Instant.now(), 400, "Bad Request", List.of(exception.getMessage()))); } @ExceptionHandler(MethodArgumentNotValidException.class) public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException exception) { List<String> details = exception.getBindingResult().getFieldErrors().stream().map(error -> error.getField() + ": " + error.getDefaultMessage()).toList(); return ResponseEntity.badRequest().body(new ErrorResponse(Instant.now(), 400, "Bad Request", details)); } @ExceptionHandler(Exception.class) public ResponseEntity<ErrorResponse> handleGeneric(Exception exception) { return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse(Instant.now(), 500, "Internal Server Error", List.of("Unexpected error"))); } }
+package com.evolua.notification.interfaces.rest;
+
+import java.time.Instant;
+import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException exception) {
+    return ResponseEntity.badRequest()
+        .body(new ErrorResponse(Instant.now(), 400, "Bad Request", List.of(exception.getMessage())));
+  }
+
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
+    List<String> details =
+        exception.getBindingResult().getFieldErrors().stream()
+            .map(error -> error.getField() + ": " + error.getDefaultMessage())
+            .toList();
+    return ResponseEntity.badRequest()
+        .body(new ErrorResponse(Instant.now(), 400, "Bad Request", details));
+  }
+
+  @ExceptionHandler(ResponseStatusException.class)
+  public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException exception) {
+    var status = exception.getStatusCode();
+    return ResponseEntity.status(status)
+        .body(
+            new ErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.toString(),
+                List.of(exception.getReason() == null ? "Unexpected error" : exception.getReason())));
+  }
+
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<ErrorResponse> handleGeneric(Exception exception) {
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(
+            new ErrorResponse(
+                Instant.now(), 500, "Internal Server Error", List.of("Unexpected error")));
+  }
+}

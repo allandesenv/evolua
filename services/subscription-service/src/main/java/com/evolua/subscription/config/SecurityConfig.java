@@ -46,6 +46,10 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/v1/public/health")
                     .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/v1/public/billing/mercadopago/webhook")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/v1/internal/subscription/access")
+                    .permitAll()
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

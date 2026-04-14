@@ -24,6 +24,9 @@ springdoc:
 app:
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*}
+  subscription:
+    base-url: ${APP_SUBSCRIPTION_BASE_URL:http://localhost:8087}
+    internal-token: ${APP_BILLING_INTERNAL_TOKEN:change-me-internal-token}
   security:
     jwt:
       secret: ${APP_SECURITY_JWT_SECRET:change-this-secret-before-production-change-this-secret}

@@ -1,6 +1,7 @@
 package com.evolua.content.interfaces.rest;
 
 import com.evolua.content.application.TrailService;
+import com.evolua.content.application.SubscriptionAccessClient;
 import com.evolua.content.domain.Trail;
 import com.evolua.content.domain.TrailMediaLink;
 import com.evolua.content.infrastructure.security.CurrentUserProvider;
@@ -27,10 +28,15 @@ public class TrailController {
 
   private final TrailService service;
   private final CurrentUserProvider currentUserProvider;
+  private final SubscriptionAccessClient subscriptionAccessClient;
 
-  public TrailController(TrailService service, CurrentUserProvider currentUserProvider) {
+  public TrailController(
+      TrailService service,
+      CurrentUserProvider currentUserProvider,
+      SubscriptionAccessClient subscriptionAccessClient) {
     this.service = service;
     this.currentUserProvider = currentUserProvider;
+    this.subscriptionAccessClient = subscriptionAccessClient;
   }
 
   @PostMapping
@@ -79,7 +85,7 @@ public class TrailController {
       filters.put("premium", premium);
     }
 
-    var hasPremiumAccess = hasPremiumAccess(currentUser.roles());
+    var hasPremiumAccess = hasPremiumAccess(currentUser.userId(), currentUser.roles());
     var result =
         service.list(
             currentUser.userId(),
@@ -208,8 +214,8 @@ public class TrailController {
     return roles.contains("ROLE_ADMIN");
   }
 
-  private boolean hasPremiumAccess(List<String> roles) {
-    return isAdmin(roles) || roles.contains("ROLE_PREMIUM");
+  private boolean hasPremiumAccess(String userId, List<String> roles) {
+    return isAdmin(roles) || roles.contains("ROLE_PREMIUM") || subscriptionAccessClient.hasPremiumAccess(userId);
   }
 
   public record JourneyTrailRequest(

@@ -8,4 +8,6 @@ public interface SubscriptionRepository {
 
   Page<Subscription> findAllByUserId(
       String userId, Pageable pageable, String search, String status, Boolean premium);
+
+  Subscription findCurrentByUserId(String userId);
 }
