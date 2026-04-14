@@ -18,15 +18,18 @@ import org.springframework.web.client.RestClient;
 public class JourneyChatService {
   private final AiProperties aiProperties;
   private final ContentCatalogClient contentCatalogClient;
+  private final EmotionalContextClient emotionalContextClient;
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
 
   public JourneyChatService(
       AiProperties aiProperties,
       ContentCatalogClient contentCatalogClient,
+      EmotionalContextClient emotionalContextClient,
       ObjectMapper objectMapper) {
     this.aiProperties = aiProperties;
     this.contentCatalogClient = contentCatalogClient;
+    this.emotionalContextClient = emotionalContextClient;
     this.objectMapper = objectMapper;
 
     var requestFactory = new SimpleClientHttpRequestFactory();
@@ -63,8 +66,9 @@ public class JourneyChatService {
     }
 
     var currentJourney = contentCatalogClient.fetchCurrentJourney(authorizationHeader);
+    var emotionalContext = emotionalContextClient.fetchRecentContext(authorizationHeader);
     if (isBlank(aiProperties.getApiKey()) || isBlank(aiProperties.getModel())) {
-      return fallbackReply(normalizedMessage, currentJourney, riskLevel, true);
+      return fallbackReply(normalizedMessage, currentJourney, emotionalContext, riskLevel, true);
     }
 
     try {
@@ -72,7 +76,13 @@ public class JourneyChatService {
           restClient
               .post()
               .uri("/responses")
-              .body(buildRequest(normalizedMessage, conversationHistory, currentJourney, trailId))
+              .body(
+                  buildRequest(
+                      normalizedMessage,
+                      conversationHistory,
+                      currentJourney,
+                      emotionalContext,
+                      trailId))
               .retrieve()
               .body(Map.class);
 
@@ -81,11 +91,11 @@ public class JourneyChatService {
       var responseRisk = normalizeRisk(stringValue(structured.get("riskLevel")), riskLevel);
       var suggestedNextStep = stringValue(structured.get("suggestedNextStep"));
       if (reply.isBlank() || suggestedNextStep.isBlank()) {
-        return fallbackReply(normalizedMessage, currentJourney, riskLevel, true);
+        return fallbackReply(normalizedMessage, currentJourney, emotionalContext, riskLevel, true);
       }
       return new JourneyChatResponse(reply, responseRisk, suggestedNextStep, false);
     } catch (Exception exception) {
-      return fallbackReply(normalizedMessage, currentJourney, riskLevel, true);
+      return fallbackReply(normalizedMessage, currentJourney, emotionalContext, riskLevel, true);
     }
   }
 
@@ -93,6 +103,7 @@ public class JourneyChatService {
       String message,
       List<JourneyChatMessage> conversationHistory,
       JourneyTrailSnapshot currentJourney,
+      EmotionalContextSnapshot emotionalContext,
       Long trailId) {
     var payload = new LinkedHashMap<String, Object>();
     payload.put("model", aiProperties.getModel());
@@ -102,7 +113,13 @@ public class JourneyChatService {
         "input",
         List.of(
             Map.of("role", "system", "content", buildTextContent(buildSystemPrompt())),
-            Map.of("role", "user", "content", buildTextContent(buildUserPrompt(message, conversationHistory, currentJourney, trailId)))));
+            Map.of(
+                "role",
+                "user",
+                "content",
+                buildTextContent(
+                    buildUserPrompt(
+                        message, conversationHistory, currentJourney, emotionalContext, trailId)))));
     payload.put("text", Map.of("format", buildResponseFormat()));
     return payload;
   }
@@ -139,6 +156,10 @@ public class JourneyChatService {
         Voce e a conversa de apoio da jornada privada da Evolua.
         Responda sempre em %s.
         Use a trilha atual como contexto principal e aja como apoio psicoeducativo de autocuidado, nao como terapeuta, diagnostico ou prescricao clinica.
+        Seja acolhedor e fiel ao que a pessoa acabou de escrever.
+        Baseie sua resposta em 2 ou 3 ancoras concretas sempre que possivel, nesta ordem: mensagem atual, ultimo check-in, padrao emocional recente e etapa da jornada.
+        Cite 1 ou 2 pontos concretos da mensagem atual quando isso ajudar, sem copiar blocos longos e sem soar mecanico.
+        Evite respostas macro, vagas ou que poderiam servir para qualquer pessoa quando houver contexto suficiente.
         Responda em 2 a 4 paragrafos curtos, com tom humano, claro e aplicavel.
         Sempre termine com um proximo passo pratico pequeno.
         Nao cite literalmente Biblia, Neville Goddard, William Blake ou filosofos por padrao; use esses referenciais apenas como lente de sentido, imaginacao, responsabilidade e linguagem simbolica.
@@ -151,17 +172,45 @@ public class JourneyChatService {
       String message,
       List<JourneyChatMessage> conversationHistory,
       JourneyTrailSnapshot currentJourney,
+      EmotionalContextSnapshot emotionalContext,
       Long trailId) {
     try {
-      var payload = new LinkedHashMap<String, Object>();
-      payload.put("mensagemUsuario", message);
-      payload.put("trailIdSolicitado", trailId);
-      payload.put("historicoCurto", normalizeHistory(conversationHistory));
-      payload.put("jornadaAtual", currentJourney == null ? null : buildJourneyPayload(currentJourney));
+      var payload =
+          buildPromptContext(
+              message, conversationHistory, currentJourney, emotionalContext, trailId);
       return objectMapper.writeValueAsString(payload);
     } catch (JsonProcessingException exception) {
       throw new IllegalStateException("Nao foi possivel serializar o contexto da conversa.", exception);
     }
+  }
+
+  Map<String, Object> buildPromptContext(
+      String message,
+      List<JourneyChatMessage> conversationHistory,
+      JourneyTrailSnapshot currentJourney,
+      EmotionalContextSnapshot emotionalContext,
+      Long trailId) {
+    var payload = new LinkedHashMap<String, Object>();
+    payload.put("mensagemUsuario", message);
+    payload.put("trailIdSolicitado", trailId);
+    payload.put("historicoCurto", normalizeHistory(conversationHistory));
+    payload.put(
+        "contextoEmocionalRecente",
+        emotionalContext == null ? null : buildEmotionalPayload(emotionalContext));
+    payload.put("jornadaAtual", currentJourney == null ? null : buildJourneyPayload(currentJourney));
+    payload.put(
+        "diretivasDeEstilo",
+        Map.of(
+            "voice", "acolhedora e fiel",
+            "mentionConcreteDetails", true,
+            "avoidGenericAdvice", true,
+            "precedence",
+                List.of(
+                    "mensagemUsuario",
+                    "contextoEmocionalRecente.ultimoCheckIn",
+                    "contextoEmocionalRecente.padraoRecente",
+                    "jornadaAtual.secoesEssenciais")));
+    return payload;
   }
 
   private List<Map<String, String>> normalizeHistory(List<JourneyChatMessage> history) {
@@ -186,8 +235,37 @@ public class JourneyChatService {
     payload.put("summary", journey.summary());
     payload.put("category", journey.category());
     payload.put("sourceStyle", journey.sourceStyle());
-    payload.put("contentExcerpt", truncate(journey.content(), 4000));
+    payload.put("contentExcerpt", truncate(journey.content(), 1800));
+    payload.put("secoesEssenciais", JourneyMarkdownSections.extract(journey.content()));
     payload.put("mediaLinks", journey.mediaLinks());
+    return payload;
+  }
+
+  private Map<String, Object> buildEmotionalPayload(EmotionalContextSnapshot context) {
+    var payload = new LinkedHashMap<String, Object>();
+    var recentCheckIns = context.recentCheckIns() == null ? List.<RecentCheckInSnapshot>of() : context.recentCheckIns();
+    var recentPayload =
+        recentCheckIns.stream()
+            .limit(3)
+            .map(this::buildCheckInPayload)
+            .toList();
+    payload.put("ultimoCheckIn", recentPayload.isEmpty() ? null : recentPayload.getFirst());
+    payload.put("checkInsRecentes", recentPayload);
+    var patternPayload = new LinkedHashMap<String, Object>();
+    patternPayload.put("averageEnergy", context.averageEnergy());
+    patternPayload.put("energyTrendLabel", safeString(context.energyTrendLabel()));
+    patternPayload.put("dominantMood", safeString(context.dominantMood()));
+    payload.put("padraoRecente", patternPayload);
+    return payload;
+  }
+
+  private Map<String, Object> buildCheckInPayload(RecentCheckInSnapshot item) {
+    var payload = new LinkedHashMap<String, Object>();
+    payload.put("mood", safeString(item.mood()));
+    payload.put("reflection", truncate(safeString(item.reflection()), 280));
+    payload.put("energyLevel", item.energyLevel());
+    payload.put("recommendedPractice", truncate(safeString(item.recommendedPractice()), 160));
+    payload.put("createdAt", item.createdAt() == null ? "" : item.createdAt().toString());
     return payload;
   }
 
@@ -220,13 +298,40 @@ public class JourneyChatService {
   }
 
   private JourneyChatResponse fallbackReply(
-      String message, JourneyTrailSnapshot currentJourney, String riskLevel, boolean fallbackUsed) {
+      String message,
+      JourneyTrailSnapshot currentJourney,
+      EmotionalContextSnapshot emotionalContext,
+      String riskLevel,
+      boolean fallbackUsed) {
     var journeyTitle = currentJourney == null || isBlank(currentJourney.title()) ? "sua jornada atual" : currentJourney.title();
+    var sections = currentJourney == null ? Map.<String, String>of() : JourneyMarkdownSections.extract(currentJourney.content());
+    var direction = truncate(sections.getOrDefault("Direcao da jornada", ""), 180);
+    var lastCheckIn = emotionalContext == null || emotionalContext.recentCheckIns() == null || emotionalContext.recentCheckIns().isEmpty()
+        ? null
+        : emotionalContext.recentCheckIns().getFirst();
+    var recentReflection =
+        lastCheckIn == null || isBlank(lastCheckIn.reflection()) ? "" : narrativeDetail(lastCheckIn.reflection());
+    var detail = narrativeDetail(message);
+    var pattern =
+        emotionalContext == null
+            ? ""
+            : " Seu padrao recente mostra energia em torno de "
+                + safeString(emotionalContext.averageEnergy() == null ? "" : emotionalContext.averageEnergy().toString())
+                + " e um ritmo "
+                + safeString(emotionalContext.energyTrendLabel())
+                + ".";
     var reply =
-        "Vou apoiar pelo caminho mais seguro agora: conecte sua pergunta com "
+        "Voce trouxe "
+            + detail
+            + (recentReflection.isBlank()
+                ? ", entao vou te responder pelo caminho mais seguro e util agora: conecte isso com "
+                : ", e isso conversa com o que apareceu no seu check-in recente sobre " + recentReflection + ". Conecte isso com ")
             + journeyTitle
-            + " e escolha uma acao pequena antes de tentar resolver tudo. Pelo que voce trouxe, vale nomear o ponto central em uma frase e observar o que o corpo pede primeiro.\n\n"
-            + "Se quiser continuar, me diga o que ficou mais dificil neste passo e eu ajudo a transformar isso em um movimento mais simples.";
+            + " e escolha uma acao pequena antes de tentar resolver tudo."
+            + pattern
+            + (direction.isBlank() ? "" : " A direcao mais util agora e: " + direction + ".")
+            + "\n\n"
+            + "Se quiser continuar, me diga o que ficou mais dificil neste passo e eu ajudo a transformar isso em um movimento mais simples, com base no que voce realmente viveu hoje.";
     return new JourneyChatResponse(reply, riskLevel, "Escolha um exercicio da jornada e pratique por 10 minutos.", fallbackUsed);
   }
 
@@ -274,5 +379,21 @@ public class JourneyChatService {
 
   private String normalize(String value) {
     return safeString(value).toLowerCase(Locale.ROOT);
+  }
+
+  private String narrativeDetail(String message) {
+    if (message == null || message.isBlank()) {
+      return "algo importante do seu momento";
+    }
+    var cleaned = message.trim().replaceAll("\\s+", " ");
+    if (cleaned.length() <= 80) {
+      return "\"" + cleaned + "\"";
+    }
+    var truncated = cleaned.substring(0, 80);
+    var lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > 20) {
+      truncated = truncated.substring(0, lastSpace);
+    }
+    return "\"" + truncated + "...\"";
   }
 }

@@ -24,7 +24,12 @@ public class PostService {
   }
 
   public Page<Post> list(
-      String userId, Pageable pageable, String search, String community, String visibility) {
-    return repository.findAllByUserId(userId, pageable, search, community, visibility);
+      String userId,
+      Pageable pageable,
+      String search,
+      String community,
+      String visibility,
+      Boolean mine) {
+    return repository.findAllByUserId(userId, pageable, search, community, visibility, mine);
   }
 }
