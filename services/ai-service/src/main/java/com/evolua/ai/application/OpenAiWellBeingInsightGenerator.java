@@ -256,6 +256,10 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
         Atue como apoio psicoeducativo e de autocuidado, nunca como diagnostico, prescricao clinica ou substituto de terapia.
         Use uma curadoria guiada inspirada em neurociencia aplicada, estoicismo, contemplacao biblica, imaginacao orientada e linguagem simbolica poetica, sem citar autores ou textos sagrados de forma literal por padrao.
         Sua tarefa e transformar o check-in do usuario em uma jornada privada, pratica, acolhedora e engajadora.
+        O insight e a suggestedAction devem soar humanos, calorosos e fieis ao que o usuario realmente contou.
+        Quando houver reflection, reconheca 1 ou 2 elementos concretos do relato e conecte isso ao historico recente sem copiar o texto inteiro.
+        Evite respostas macro, stock phrases e aberturas repetidas em todos os casos.
+        Varie a abertura, a justificativa e o proximo passo conforme humor, energia, reflection e tendencia recente.
         O campo generatedTrailDraft.content deve ser Markdown completo, com estas secoes obrigatorias: Leitura do momento, Direcao da jornada, Conversa guiada, Dicas praticas, Exercicios, Plano de 24 horas, Plano de 7 dias, Espaco sugerido, Proximos check-ins e Lembrete de seguranca.
         A jornada deve caber em 10 a 20 minutos de pratica inicial e ser profunda sem ser longa demais.
         Em mediaLinks, nao invente URLs. Se nao tiver certeza absoluta, retorne uma lista vazia; o sistema vai anexar links curados.
@@ -285,6 +289,14 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
           spaces.stream().map(this::buildSpacePayload).collect(Collectors.toCollection(ArrayList::new)));
       contextPayload.put("rolesUsuario", roles);
       contextPayload.put("baselineSeguro", buildBaselinePayload(baseline));
+      contextPayload.put(
+          "diretivasDeEstilo",
+          Map.of(
+              "voice", "acolhedora e fiel",
+              "citeConcreteDetailsWhenAvailable", true,
+              "avoidStockPhrases", true,
+              "contextConfidence",
+              currentCheckIn.reflection() == null || currentCheckIn.reflection().isBlank() ? "medium" : "high"));
       return objectMapper.writeValueAsString(contextPayload);
     } catch (JsonProcessingException exception) {
       throw new IllegalStateException("Nao foi possivel serializar o contexto da IA.", exception);

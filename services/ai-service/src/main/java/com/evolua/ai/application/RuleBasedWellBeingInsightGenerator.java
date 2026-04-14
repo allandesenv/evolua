@@ -142,30 +142,46 @@ public class RuleBasedWellBeingInsightGenerator implements WellBeingInsightGener
     var mood = normalize(currentCheckIn.mood());
     var trend = context.energyTrendLabel() == null ? "estavel" : context.energyTrendLabel();
     var averageEnergy = context.averageEnergy() == null ? currentCheckIn.energyLevel() : context.averageEnergy();
+    var detail = narrativeDetail(currentCheckIn.reflection());
+    var moodLabel = currentCheckIn.mood() == null || currentCheckIn.mood().isBlank() ? "seu estado atual" : currentCheckIn.mood().trim();
 
     if ("medium".equals(riskLevel)) {
       return hasFreeText
-          ? "Pelo que voce descreveu, ha sinais de tensao relevante neste momento. O mais util agora e diminuir a carga e escolher uma resposta pequena, reguladora e viavel."
-          : "Sem muitos detalhes do motivo, seu check-in e o padrao recente sugerem tensao relevante agora. Vale reduzir a carga e escolher uma proxima acao curta e reguladora.";
+          ? "Voce nomeou "
+              + detail
+              + ", e isso combina com um momento de tensao real. Com a energia em "
+              + safeEnergyLabel(currentCheckIn.energyLevel())
+              + ", o mais util agora e baixar a carga e escolher uma resposta pequena, reguladora e viavel."
+          : "Seu check-in mostra tensao relevante agora, com um padrao recente "
+              + trend
+              + ". Vale reduzir a carga e escolher uma proxima acao curta antes de tentar resolver tudo.";
     }
     if (mood.contains("ans")) {
       return hasFreeText
-          ? "Pelo que voce descreveu, seu sistema parece mais ativado do que disponivel para performance. Seu historico recente indica que regulacao vem antes de produtividade agora."
-          : "Sem muitos detalhes do motivo, seu humor atual e o historico recente sugerem ativacao emocional alta. Faz mais sentido regular o corpo e a atencao antes de cobrar rendimento.";
+          ? "Quando voce fala de "
+              + detail
+              + ", aparece um sistema mais ativado do que disponivel para desempenho. Seu historico recente sugere que regulacao vem antes de produtividade neste ponto."
+          : "Seu registro de "
+              + moodLabel
+              + " somado ao historico recente sugere ativacao emocional alta. Faz mais sentido regular o corpo e a atencao antes de cobrar rendimento.";
     }
     if (mood.contains("cans")) {
       return hasFreeText
-          ? "O contexto que voce trouxe combina com um momento de desgaste real. Seu corpo parece pedir recuperacao e ritmo, entao o melhor proximo passo agora e leve e sustentavel."
-          : "Mesmo sem detalhes do motivo, sua energia e o historico recente apontam necessidade de recuperacao. O melhor proximo passo agora e algo leve e sustentavel.";
+          ? "O que voce descreveu em "
+              + detail
+              + " combina com desgaste real, nao com falta de vontade. Seu corpo parece pedir recuperacao e ritmo, entao o melhor proximo passo agora precisa ser leve e sustentavel."
+          : "Sua energia e o historico recente apontam necessidade de recuperacao. O melhor proximo passo agora e algo leve, repetivel e sem aumentar a cobranca.";
     }
     if (hasFreeText) {
-      return "Pelo que voce descreveu, existe espaco para avancar com mais clareza sem forcar demais. Seu historico recente mostra um ritmo "
+      return "No trecho em que voce fala de "
+          + detail
+          + ", aparece um desejo de seguir sem se atropelar. Seu historico recente mostra um ritmo "
           + trend
           + " e energia media em torno de "
           + safeEnergyLabel(averageEnergy)
           + ".";
     }
-    return "Sem muitos detalhes do motivo, seu check-in indica uma boa base para seguir com constancia. O padrao recente mostra um ritmo "
+    return "Seu check-in indica uma base razoavel para seguir com constancia, sem precisar ampliar demais o passo agora. O padrao recente mostra um ritmo "
         + trend
         + " e energia media em torno de "
         + safeEnergyLabel(averageEnergy)
@@ -174,23 +190,24 @@ public class RuleBasedWellBeingInsightGenerator implements WellBeingInsightGener
 
   private String buildSuggestedAction(
       CurrentCheckInInput currentCheckIn, String trailTitle, boolean hasFreeText, String riskLevel) {
+    var detail = narrativeDetail(currentCheckIn.reflection());
     if ("medium".equals(riskLevel)) {
       return hasFreeText
-          ? "Comece pelos primeiros 10 minutos da jornada proposta e adie decisoes maiores ate sentir mais estabilidade."
-          : "Como o contexto ainda esta parcial, comece pelos primeiros 10 minutos da jornada antes de decidir o restante do dia.";
+          ? "Como " + detail + " ainda pesa agora, comece pelos primeiros 10 minutos da jornada e adie decisoes maiores ate sentir mais estabilidade."
+          : "Comece pelos primeiros 10 minutos da jornada antes de decidir o restante do dia.";
     }
     if (currentCheckIn.energyLevel() != null && currentCheckIn.energyLevel() <= 4) {
       return hasFreeText
-          ? "Respeite o ritmo do seu relato e inicie a jornada em modo leve, sem aumentar exigencia hoje."
+          ? "Respeite o ritmo de " + detail + " e inicie a jornada em modo leve, sem aumentar exigencia hoje."
           : "Sua energia sugere comecar pequeno: inicie a jornada em ritmo leve e observe a resposta do corpo.";
     }
     if (normalize(currentCheckIn.mood()).contains("ans")) {
       return hasFreeText
-          ? "Comece pelo primeiro bloco da jornada, com respiracao e ancoragem, e so depois reavalie o restante do dia."
+          ? "Use o que voce contou sobre " + detail + " como ponto de partida e comece pelo primeiro bloco da jornada, com respiracao e ancoragem."
           : "Comece pelo primeiro bloco da jornada com respiracao e ancoragem, e use isso para decidir o resto do dia.";
     }
     return hasFreeText
-        ? "Siga pela jornada privada sugerida e transforme o que apareceu no seu relato em uma unica frente clara hoje."
+        ? "Pegue o que apareceu em " + detail + " e transforme isso em uma unica frente clara hoje, com apoio da jornada privada."
         : "Use a jornada " + trailTitle + " como proximo passo unico, apoiando-se no seu padrao recente.";
   }
 
@@ -207,7 +224,7 @@ public class RuleBasedWellBeingInsightGenerator implements WellBeingInsightGener
     if (chosenTrail != null && hasFreeText) {
       return "A trilha privada segue o mesmo eixo de cuidado que ja aparece em \""
           + chosenTrail.title()
-          + "\" e conversa com o contexto que voce descreveu.";
+          + "\" e conversa diretamente com o que voce trouxe no relato.";
     }
     if (hasFreeText) {
       return "A jornada " + generatedTitle + " conversa com o contexto que voce descreveu e combina com o seu ritmo recente " + trend + ".";
@@ -315,67 +332,74 @@ public class RuleBasedWellBeingInsightGenerator implements WellBeingInsightGener
       case "clareza-e-acao" -> "Uma trilha privada para sustentar foco, significado e acao intencional sem endurecer o corpo.";
       default -> "Uma trilha privada para compreender seu momento e traduzi-lo em passos pequenos e viaveis.";
     };
+    var averageEnergyLabel = safeEnergyLabel(context.averageEnergy());
+    var energyTrend = context.energyTrendLabel() == null ? "inicial" : context.energyTrendLabel();
+    var dominantMood =
+        context.dominantMood() == null || context.dominantMood().isBlank()
+            ? "indefinido"
+            : context.dominantMood();
 
     var content =
         """
-# $title
+        # %s
 
-## Intencao da jornada
-$summary
+        ## Intencao da jornada
+        %s
 
-Esta jornada foi curada a partir do seu check-in mais recente e combina uma lente de neurociencia aplicada com reflexao interior e sentido pratico. O objetivo nao e exigir mais de voce, e sim ajudar seu sistema a encontrar um proximo passo regulado, consciente e sustentavel.
+        Esta jornada foi curada a partir do seu check-in mais recente e combina uma lente de neurociencia aplicada com reflexao interior e sentido pratico. O objetivo nao e exigir mais de voce, e sim ajudar seu sistema a encontrar um proximo passo regulado, consciente e sustentavel.
 
-## Leitura do momento
-Seu estado atual merece ser tratado como informacao, nao como falha. A energia media recente esta em ${safeEnergyLabel(context.averageEnergy())}, a tendencia aparece como ${context.energyTrendLabel() == null ? "inicial" : context.energyTrendLabel()} e o humor dominante recente e ${context.dominantMood() == null || context.dominantMood().isBlank() ? "indefinido" : context.dominantMood()}.
+        ## Leitura do momento
+        Seu estado atual merece ser tratado como informacao, nao como falha. A energia media recente esta em %s, a tendencia aparece como %s e o humor dominante recente e %s.
 
-## Direcao da jornada
-Esta trilha usa corpo, atencao e significado em uma sequencia simples: primeiro regular, depois observar, depois agir. A ideia e criar uma resposta pequena e repetivel, nao um plano perfeito.
+        ## Direcao da jornada
+        Esta trilha usa corpo, atencao e significado em uma sequencia simples: primeiro regular, depois observar, depois agir. A ideia e criar uma resposta pequena e repetivel, nao um plano perfeito.
 
-## Conversa guiada
-Use estas perguntas como uma conversa consigo mesmo antes de seguir:
-- O que meu estado esta tentando proteger ou sinalizar hoje?
-- Que parte disso e fato concreto, e que parte e antecipacao ou interpretacao?
-- Se eu respondesse com firmeza e gentileza, qual seria o proximo gesto?
-- Que pensamento eu posso soltar por algumas horas sem precisar resolver agora?
+        ## Conversa guiada
+        Use estas perguntas como uma conversa consigo mesmo antes de seguir:
+        - O que meu estado esta tentando proteger ou sinalizar hoje?
+        - Que parte disso e fato concreto, e que parte e antecipacao ou interpretacao?
+        - Se eu respondesse com firmeza e gentileza, qual seria o proximo gesto?
+        - Que pensamento eu posso soltar por algumas horas sem precisar resolver agora?
 
-## Dicas praticas
-- Reduza a exigencia antes de aumentar a performance.
-- Escolha um ambiente com menos ruido por 10 minutos.
-- Transforme uma preocupacao ampla em uma acao fisica pequena.
-- Evite comparar seu ritmo atual com o melhor dia de outra pessoa.
+        ## Dicas praticas
+        - Reduza a exigencia antes de aumentar a performance.
+        - Escolha um ambiente com menos ruido por 10 minutos.
+        - Transforme uma preocupacao ampla em uma acao fisica pequena.
+        - Evite comparar seu ritmo atual com o melhor dia de outra pessoa.
 
-## Exercicios
-1. Respiracao de retorno: inspire por 4 segundos, expire por 6 segundos e repita por 3 minutos.
-2. Escrita breve: complete a frase "Agora eu percebo que..." por 5 linhas, sem editar.
-3. Acao minima: escolha uma tarefa que caiba em 10 minutos e termine antes de abrir outra.
-4. Fechamento: registre uma frase sobre o que mudou no corpo ou na clareza.
+        ## Exercicios
+        1. Respiracao de retorno: inspire por 4 segundos, expire por 6 segundos e repita por 3 minutos.
+        2. Escrita breve: complete a frase "Agora eu percebo que..." por 5 linhas, sem editar.
+        3. Acao minima: escolha uma tarefa que caiba em 10 minutos e termine antes de abrir outra.
+        4. Fechamento: registre uma frase sobre o que mudou no corpo ou na clareza.
 
-## Plano de 24 horas
-1. Reserve de 10 a 15 minutos para iniciar sem interrupcoes.
-2. Comece pelo corpo: respiracao mais lenta, ombros soltos e atencao no ambiente.
-3. Nomeie em uma frase o que esta mais pesando agora.
-4. Escolha apenas uma acao simples para o restante do dia.
+        ## Plano de 24 horas
+        1. Reserve de 10 a 15 minutos para iniciar sem interrupcoes.
+        2. Comece pelo corpo: respiracao mais lenta, ombros soltos e atencao no ambiente.
+        3. Nomeie em uma frase o que esta mais pesando agora.
+        4. Escolha apenas uma acao simples para o restante do dia.
 
-## Plano de 7 dias
-- Dia 1: estabilizar o corpo e nomear o estado.
-- Dia 2: repetir o exercicio mais util por 10 minutos.
-- Dia 3: observar um gatilho recorrente sem se julgar.
-- Dia 4: escolher uma pequena pratica de reparo ou coragem.
-- Dia 5: conversar com alguem seguro ou registrar um insight.
-- Dia 6: revisar o que deu certo sem transformar em cobranca.
-- Dia 7: fazer novo check-in e ajustar o rumo da jornada.
+        ## Plano de 7 dias
+        - Dia 1: estabilizar o corpo e nomear o estado.
+        - Dia 2: repetir o exercicio mais util por 10 minutos.
+        - Dia 3: observar um gatilho recorrente sem se julgar.
+        - Dia 4: escolher uma pequena pratica de reparo ou coragem.
+        - Dia 5: conversar com alguem seguro ou registrar um insight.
+        - Dia 6: revisar o que deu certo sem transformar em cobranca.
+        - Dia 7: fazer novo check-in e ajustar o rumo da jornada.
 
-## Espaco sugerido
-Entre no espaco indicado pela IA apenas se isso trouxer acolhimento, nao pressao. O objetivo e encontrar reflexoes e conversas leves, nao competir ou se expor demais.
+        ## Espaco sugerido
+        Entre no espaco indicado pela IA apenas se isso trouxer acolhimento, nao pressao. O objetivo e encontrar reflexoes e conversas leves, nao competir ou se expor demais.
 
-## Proximos check-ins
-- Inicio: 10 a 15 minutos hoje
-- Continuidade: revisitar amanha com novo check-in
-- Ajuste: deixar a jornada evoluir conforme seu estado real
+        ## Proximos check-ins
+        - Inicio: 10 a 15 minutos hoje
+        - Continuidade: revisitar amanha com novo check-in
+        - Ajuste: deixar a jornada evoluir conforme seu estado real
 
-## Lembrete de seguranca
-Esta jornada e apoio de autocuidado e reflexao. Se o sofrimento ficar intenso, persistente ou vier com risco de se machucar, priorize apoio humano imediato e suporte profissional.
-""";
+        ## Lembrete de seguranca
+        Esta jornada e apoio de autocuidado e reflexao. Se o sofrimento ficar intenso, persistente ou vier com risco de se machucar, priorize apoio humano imediato e suporte profissional.
+        """
+            .formatted(title, summary, averageEnergyLabel, energyTrend, dominantMood);
 
     return new GeneratedTrailDraft(
         title, summary, content, normalizeCategory(journeyKey), sourceStyle, linkLibrary.linksFor(journeyKey));
@@ -432,5 +456,23 @@ Esta jornada e apoio de autocuidado e reflexao. Se o sofrimento ficar intenso, p
 
   private String normalize(String value) {
     return value == null ? "" : value.toLowerCase(Locale.ROOT);
+  }
+
+  private String narrativeDetail(String reflection) {
+    if (reflection == null || reflection.isBlank()) {
+      return "o que voce esta vivendo";
+    }
+
+    var cleaned = reflection.trim().replaceAll("\\s+", " ");
+    if (cleaned.length() <= 90) {
+      return "\"" + cleaned + "\"";
+    }
+
+    var truncated = cleaned.substring(0, 90);
+    var lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > 30) {
+      truncated = truncated.substring(0, lastSpace);
+    }
+    return "\"" + truncated + "...\"";
   }
 }
