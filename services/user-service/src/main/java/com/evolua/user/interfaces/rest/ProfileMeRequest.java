@@ -4,11 +4,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
-public record ProfileRequest(
+public record ProfileMeRequest(
     @NotBlank String displayName,
     String bio,
     @NotNull Integer journeyLevel,
-    @NotNull Boolean premium,
-    LocalDate birthDate,
-    String gender,
+    @NotNull LocalDate birthDate,
+    @NotBlank String gender,
     String customGender) {}

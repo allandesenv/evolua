@@ -39,9 +39,9 @@ public class AuthService {
   }
 
   @Transactional
-  public AuthUser register(String email, String password) {
+  public AuthUser register(String email, String password, String displayName) {
     authUserRepository.findByEmail(email).ifPresent(existing -> {
-      throw new IllegalArgumentException("Email already registered");
+      throw new AuthConflictException("Email ja cadastrado.");
     });
 
     return authUserRepository.save(
@@ -52,7 +52,7 @@ public class AuthService {
             passwordEncoder.encode(password),
             LOCAL_PROVIDER,
             null,
-            null,
+            displayName,
             null,
             List.of("ROLE_USER"),
             Instant.now()));
@@ -63,10 +63,10 @@ public class AuthService {
     var user =
         authUserRepository
             .findByEmail(email)
-            .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+            .orElseThrow(() -> new UserNotFoundException("Usuario nao existe."));
 
     if (!passwordEncoder.matches(password, user.passwordHash())) {
-      throw new IllegalArgumentException("Invalid credentials");
+      throw new InvalidCredentialsException("Credenciais invalidas.");
     }
 
     return issueTokens(user);
@@ -77,15 +77,15 @@ public class AuthService {
     var session =
         refreshSessionRepository
             .findByRefreshToken(refreshToken)
-            .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
+            .orElseThrow(() -> new IllegalArgumentException("Token de sessao invalido."));
     if (session.revoked()) {
-      throw new IllegalArgumentException("Refresh token revoked");
+      throw new IllegalArgumentException("Token de sessao revogado.");
     }
 
     var user =
         authUserRepository
             .findByUserId(session.userId())
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            .orElseThrow(() -> new UserNotFoundException("Usuario nao existe."));
 
     return issueTokens(user);
   }
@@ -93,7 +93,7 @@ public class AuthService {
   public AuthUser me(String userId) {
     return authUserRepository
         .findByUserId(userId)
-        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        .orElseThrow(() -> new UserNotFoundException("Usuario nao existe."));
   }
 
   @Transactional
@@ -157,17 +157,17 @@ public class AuthService {
     var authorizationCode =
         authAuthorizationCodeRepository
             .findByCode(code)
-            .orElseThrow(() -> new IllegalArgumentException("Invalid authorization code"));
+            .orElseThrow(() -> new IllegalArgumentException("Codigo de autorizacao invalido."));
 
     if (authorizationCode.consumed() || authorizationCode.expiresAt().isBefore(Instant.now())) {
       authAuthorizationCodeRepository.deleteByCode(code);
-      throw new IllegalArgumentException("Authorization code expired");
+      throw new IllegalArgumentException("Codigo de autorizacao expirado.");
     }
 
     var user =
         authUserRepository
             .findByUserId(authorizationCode.userId())
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            .orElseThrow(() -> new UserNotFoundException("Usuario nao existe."));
 
     authAuthorizationCodeRepository.deleteByCode(code);
     return issueTokens(user);
@@ -198,7 +198,7 @@ public class AuthService {
     var refresh = tokenIssuer.refreshToken(user.userId(), user.email(), user.roles());
     refreshSessionRepository.save(
         new RefreshSession(null, user.userId(), refresh, Instant.now(), false));
-    return new AuthTokens(access, refresh);
+    return new AuthTokens(access, refresh, user);
   }
 
   private boolean equalsOrBlank(String left, String right) {

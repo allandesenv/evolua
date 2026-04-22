@@ -44,7 +44,7 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/actuator/health", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
                     .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/v1/public/health")
+                    .requestMatchers(HttpMethod.GET, "/v1/public/health", "/v1/public/profiles/avatar/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

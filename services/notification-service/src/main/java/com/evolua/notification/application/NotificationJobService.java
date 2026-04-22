@@ -32,7 +32,7 @@ public class NotificationJobService {
 
   public Page<NotificationJob> list(
       String userId, Pageable pageable, String search, String type, Boolean unreadOnly) {
-    return repository.findAllByUserId(userId, pageable, search, normalizeType(type), unreadOnly);
+    return repository.findAllByUserId(userId, pageable, search, normalizeOptionalType(type), unreadOnly);
   }
 
   public long countUnread(String userId) {
@@ -53,6 +53,13 @@ public class NotificationJobService {
 
   public boolean hasRecentReminder(String userId, String type, Instant since) {
     return repository.existsRecentByUserIdAndType(userId, normalizeType(type), since);
+  }
+
+  private String normalizeOptionalType(String type) {
+    if (type == null || type.isBlank()) {
+      return null;
+    }
+    return normalizeType(type);
   }
 
   private NotificationJob create(

@@ -39,16 +39,15 @@ public class AuthController {
   @Operation(summary = "Register user")
   public ResponseEntity<ApiResponse<AuthUserResponse>> register(
       @Valid @RequestBody RegisterRequest request) {
-    var user = authService.register(request.email(), request.password());
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .body(ApiResponse.success(201, "Created", new AuthUserResponse(user.userId(), user.email(), user.roles())));
+    var user = authService.register(request.email(), request.password(), request.displayName());
+    return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(201, "Created", toAuthUserResponse(user)));
   }
 
   @PostMapping("/v1/public/auth/login")
   @Operation(summary = "Login user")
   public ResponseEntity<ApiResponse<TokenResponse>> login(@Valid @RequestBody LoginRequest request) {
     var tokens = authService.login(request.email(), request.password());
-    return ResponseEntity.ok(ApiResponse.success(200, "Logged in", new TokenResponse(tokens.accessToken(), tokens.refreshToken())));
+    return ResponseEntity.ok(ApiResponse.success(200, "Logged in", toTokenResponse(tokens)));
   }
 
   @PostMapping("/v1/public/auth/refresh")
@@ -56,7 +55,7 @@ public class AuthController {
   public ResponseEntity<ApiResponse<TokenResponse>> refresh(
       @Valid @RequestBody RefreshRequest request) {
     var tokens = authService.refresh(request.refreshToken());
-    return ResponseEntity.ok(ApiResponse.success(200, "Refreshed", new TokenResponse(tokens.accessToken(), tokens.refreshToken())));
+    return ResponseEntity.ok(ApiResponse.success(200, "Refreshed", toTokenResponse(tokens)));
   }
 
   @GetMapping("/v1/public/auth/google/start")
@@ -81,22 +80,42 @@ public class AuthController {
       @Valid @RequestBody GoogleExchangeRequest request) {
     var tokens = authService.exchangeAuthorizationCode(request.code());
     return ResponseEntity.ok(
-        ApiResponse.success(200, "Logged in with Google", new TokenResponse(tokens.accessToken(), tokens.refreshToken())));
+        ApiResponse.success(200, "Logged in with Google", toTokenResponse(tokens)));
   }
 
   @GetMapping("/v1/auth/me")
   @Operation(summary = "Current account")
   public ResponseEntity<ApiResponse<AuthUserResponse>> me() {
     var user = authService.me(currentUserProvider.getCurrentUser().userId());
-    return ResponseEntity.ok(
-        ApiResponse.success(200, "Current user", new AuthUserResponse(user.userId(), user.email(), user.roles())));
+    return ResponseEntity.ok(ApiResponse.success(200, "Current user", toAuthUserResponse(user)));
   }
 
   private ResponseEntity<Void> redirect(URI location) {
     return ResponseEntity.status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, location.toString()).build();
   }
 
-  public record RegisterRequest(@Email String email, @NotBlank String password) {}
+  private AuthUserResponse toAuthUserResponse(com.evolua.auth.domain.AuthUser user) {
+    return new AuthUserResponse(
+        user.userId(),
+        user.email(),
+        user.displayName(),
+        user.avatarUrl(),
+        user.roles());
+  }
+
+  private TokenResponse toTokenResponse(com.evolua.auth.application.AuthTokens tokens) {
+    var user = tokens.user();
+    return new TokenResponse(
+        tokens.accessToken(),
+        tokens.refreshToken(),
+        user.userId(),
+        user.email(),
+        user.displayName(),
+        user.avatarUrl(),
+        user.roles());
+  }
+
+  public record RegisterRequest(@Email String email, @NotBlank String password, @NotBlank String displayName) {}
 
   public record LoginRequest(@Email String email, @NotBlank String password) {}
 
@@ -104,7 +123,15 @@ public class AuthController {
 
   public record GoogleExchangeRequest(@NotBlank String code) {}
 
-  public record TokenResponse(String accessToken, String refreshToken) {}
+  public record TokenResponse(
+      String accessToken,
+      String refreshToken,
+      String userId,
+      String email,
+      String displayName,
+      String avatarUrl,
+      List<String> roles) {}
 
-  public record AuthUserResponse(String userId, String email, List<String> roles) {}
+  public record AuthUserResponse(
+      String userId, String email, String displayName, String avatarUrl, List<String> roles) {}
 }
