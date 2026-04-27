@@ -48,6 +48,10 @@ public class TrailService {
     return repository.findAll(userId, pageable, search, category, premium);
   }
 
+  public Trail findById(Long id) {
+    return repository.findById(id);
+  }
+
   public Trail currentJourney(String userId) {
     return repository.findActiveJourneyByUserId(userId);
   }
