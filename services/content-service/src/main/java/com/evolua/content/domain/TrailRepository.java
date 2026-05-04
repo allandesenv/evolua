@@ -6,6 +6,10 @@ import org.springframework.data.domain.Pageable;
 public interface TrailRepository {
   Trail save(Trail item);
 
+  Trail findById(Long id);
+
+  void deleteById(Long id);
+
   Page<Trail> findAll(
       String userId, Pageable pageable, String search, String category, Boolean premium);
 

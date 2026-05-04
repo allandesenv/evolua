@@ -33,6 +33,9 @@ services:
       SPRING_DATASOURCE_USERNAME: evolua
       SPRING_DATASOURCE_PASSWORD: evolua
       APP_SECURITY_JWT_SECRET: change-this-secret-before-production-change-this-secret
+      APP_PROFILE_AVATAR_STORAGE_PATH: /data/avatars
+    volumes:
+      - user-profile-avatars:/data/avatars
     depends_on: [postgres-user]
   content-service:
     build:
@@ -158,3 +161,6 @@ services:
     environment: { MONGO_INITDB_ROOT_USERNAME: evolua, MONGO_INITDB_ROOT_PASSWORD: evolua }
   redis:
     image: redis:8-alpine
+
+volumes:
+  user-profile-avatars:

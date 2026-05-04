@@ -1,1 +1,14 @@
-package com.evolua.user.interfaces.rest; public record ProfileRequest(@jakarta.validation.constraints.NotBlank String displayName, @jakarta.validation.constraints.NotBlank String bio, @jakarta.validation.constraints.NotNull Integer journeyLevel, @jakarta.validation.constraints.NotNull Boolean premium) { }
+package com.evolua.user.interfaces.rest;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import java.time.LocalDate;
+
+public record ProfileRequest(
+    @NotBlank String displayName,
+    String bio,
+    @NotNull Integer journeyLevel,
+    @NotNull Boolean premium,
+    LocalDate birthDate,
+    String gender,
+    String customGender) {}

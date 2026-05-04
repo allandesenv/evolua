@@ -24,6 +24,8 @@ springdoc:
 app:
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*}
+  profile:
+    avatar-storage-path: ${APP_PROFILE_AVATAR_STORAGE_PATH:./data/avatars}
   security:
     jwt:
       secret: ${APP_SECURITY_JWT_SECRET:change-this-secret-before-production-change-this-secret}

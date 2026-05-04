@@ -2,8 +2,12 @@ package com.evolua.content.interfaces.rest;
 
 import com.evolua.content.application.TrailService;
 import com.evolua.content.application.SubscriptionAccessClient;
+import com.evolua.content.application.TrailJourney;
+import com.evolua.content.application.TrailJourneyService;
+import com.evolua.content.application.TrailJourneyStep;
 import com.evolua.content.domain.Trail;
 import com.evolua.content.domain.TrailMediaLink;
+import com.evolua.content.domain.TrailProgress;
 import com.evolua.content.infrastructure.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -27,14 +31,17 @@ public class TrailController {
       Set.of("youtube", "video", "article", "audio", "external");
 
   private final TrailService service;
+  private final TrailJourneyService journeyService;
   private final CurrentUserProvider currentUserProvider;
   private final SubscriptionAccessClient subscriptionAccessClient;
 
   public TrailController(
       TrailService service,
+      TrailJourneyService journeyService,
       CurrentUserProvider currentUserProvider,
       SubscriptionAccessClient subscriptionAccessClient) {
     this.service = service;
+    this.journeyService = journeyService;
     this.currentUserProvider = currentUserProvider;
     this.subscriptionAccessClient = subscriptionAccessClient;
   }
@@ -60,6 +67,41 @@ public class TrailController {
             normalizeMediaLinks(request.mediaLinks()));
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(ApiResponse.success(201, "Created", toResponse(created, true)));
+  }
+
+  @PutMapping("/{trailId}")
+  @Operation(summary = "Update Trail")
+  public ResponseEntity<ApiResponse<TrailResponse>> update(
+      @PathVariable Long trailId, @Valid @RequestBody TrailRequest request) {
+    var currentUser = currentUserProvider.getCurrentUser();
+    if (!isAdmin(currentUser.roles())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only administrators can update trails");
+    }
+
+    validateRequest(request);
+
+    var updated =
+        service.update(
+            trailId,
+            request.title().trim(),
+            request.summary().trim(),
+            request.content().trim(),
+            request.category().trim(),
+            request.premium(),
+            normalizeMediaLinks(request.mediaLinks()));
+    return ResponseEntity.ok(ApiResponse.success(200, "Updated", toResponse(updated, true)));
+  }
+
+  @DeleteMapping("/{trailId}")
+  @Operation(summary = "Delete Trail")
+  public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long trailId) {
+    var currentUser = currentUserProvider.getCurrentUser();
+    if (!isAdmin(currentUser.roles())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only administrators can delete trails");
+    }
+
+    service.delete(trailId);
+    return ResponseEntity.ok(ApiResponse.success(200, "Deleted", null));
   }
 
   @GetMapping
@@ -117,6 +159,37 @@ public class TrailController {
 
     return ResponseEntity.ok(
         ApiResponse.success(200, "Current journey", toResponse(trail, true)));
+  }
+
+  @GetMapping("/{trailId}/journey")
+  @Operation(summary = "Trail visual journey and progress")
+  public ResponseEntity<ApiResponse<TrailJourneyResponse>> journey(@PathVariable Long trailId) {
+    var currentUser = currentUserProvider.getCurrentUser();
+    var journey = journeyService.getJourney(currentUser.userId(), trailId);
+    ensureJourneyAccessible(journey, currentUser.userId(), currentUser.roles());
+    return ResponseEntity.ok(
+        ApiResponse.success(200, "Trail journey", toJourneyResponse(journey)));
+  }
+
+  @PostMapping("/{trailId}/journey/start")
+  @Operation(summary = "Start trail journey")
+  public ResponseEntity<ApiResponse<TrailJourneyResponse>> startJourney(@PathVariable Long trailId) {
+    var currentUser = currentUserProvider.getCurrentUser();
+    ensureTrailAccessible(service.findById(trailId), currentUser.userId(), currentUser.roles());
+    var journey = journeyService.startJourney(currentUser.userId(), trailId);
+    return ResponseEntity.ok(
+        ApiResponse.success(200, "Trail journey started", toJourneyResponse(journey)));
+  }
+
+  @PostMapping("/{trailId}/journey/steps/{stepIndex}/complete")
+  @Operation(summary = "Complete trail journey step")
+  public ResponseEntity<ApiResponse<TrailJourneyResponse>> completeJourneyStep(
+      @PathVariable Long trailId, @PathVariable Integer stepIndex) {
+    var currentUser = currentUserProvider.getCurrentUser();
+    ensureTrailAccessible(service.findById(trailId), currentUser.userId(), currentUser.roles());
+    var journey = journeyService.completeStep(currentUser.userId(), trailId, stepIndex);
+    return ResponseEntity.ok(
+        ApiResponse.success(200, "Trail journey step completed", toJourneyResponse(journey)));
   }
 
   @PostMapping("/internal/journey/current")
@@ -210,12 +283,62 @@ public class TrailController {
         item.createdAt());
   }
 
+  private TrailJourneyResponse toJourneyResponse(TrailJourney journey) {
+    return new TrailJourneyResponse(
+        toResponse(journey.trail(), true),
+        journey.steps().stream().map(this::toStepResponse).toList(),
+        toProgressResponse(journey.progress()),
+        journey.progressPercent(),
+        journey.nextStep() == null ? null : toStepResponse(journey.nextStep()));
+  }
+
+  private TrailJourneyStepResponse toStepResponse(TrailJourneyStep step) {
+    return new TrailJourneyStepResponse(
+        step.index(),
+        step.title(),
+        step.summary(),
+        step.content(),
+        step.status(),
+        step.estimatedMinutes(),
+        step.mediaLinks().stream()
+            .map(link -> new TrailMediaLinkResponse(link.label(), link.url(), link.type()))
+            .toList());
+  }
+
+  private TrailProgressResponse toProgressResponse(TrailProgress progress) {
+    if (progress == null) {
+      return null;
+    }
+    return new TrailProgressResponse(
+        progress.currentStepIndex(),
+        progress.completedStepIndexes(),
+        progress.startedAt(),
+        progress.updatedAt(),
+        progress.completedAt());
+  }
+
   private boolean isAdmin(List<String> roles) {
     return roles.contains("ROLE_ADMIN");
   }
 
   private boolean hasPremiumAccess(String userId, List<String> roles) {
     return isAdmin(roles) || roles.contains("ROLE_PREMIUM") || subscriptionAccessClient.hasPremiumAccess(userId);
+  }
+
+  private void ensureJourneyAccessible(TrailJourney journey, String userId, List<String> roles) {
+    ensureTrailAccessible(journey.trail(), userId, roles);
+  }
+
+  private void ensureTrailAccessible(Trail trail, String userId, List<String> roles) {
+    if (trail == null) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Trilha nao encontrada.");
+    }
+    if (Boolean.TRUE.equals(trail.privateTrail()) && !userId.equals(trail.userId())) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Trilha nao encontrada.");
+    }
+    if (Boolean.TRUE.equals(trail.premium()) && !hasPremiumAccess(userId, roles)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Premium access required");
+    }
   }
 
   public record JourneyTrailRequest(

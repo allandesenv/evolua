@@ -1,346 +1,212 @@
 # Evolua Backend
 
-Backend em microsservicos para o Evolua com Java 21, Spring Boot 3+, Maven, Docker Compose, OpenAPI e Clean Architecture.
+Backend em microsservicos do Evolua com Java 21, Spring Boot 3.5, Maven, Docker Compose e bancos separados por contexto.
 
-## Arquitetura
+## Servicos
 
-- `gateway-service`: roteamento central da API
-- `services/auth-service`: cadastro, login, refresh token e `me`
-- `services/user-service`: perfis do usuario
-- `services/content-service`: trilhas e conteudos
-- `services/emotional-service`: check-ins emocionais
-- `services/social-service`: posts e feed
-- `services/chat-service`: mensagens e WebSocket
-- `services/subscription-service`: assinatura premium
-- `services/notification-service`: notificacoes baseadas em Redis
-
-## Stack
-
-- Java 21
-- Maven 3.9+
-- Spring Boot 3+
-- PostgreSQL
-- MongoDB
-- Redis
-- Docker e Docker Compose
+- `gateway-service`: entrada HTTP principal
+- `auth-service`: login, cadastro, refresh, Google OAuth local
+- `user-service`: perfil principal do usuario, avatar e dados pessoais
+- `content-service`: trilhas, jornadas privadas e gate premium
+- `emotional-service`: check-ins emocionais
+- `social-service`: reflexoes e espacos
+- `chat-service`: mensagens e STOMP/WebSocket
+- `subscription-service`: planos, checkout e webhook de pagamento
+- `notification-service`: inbox in-app e console admin
+- `ai-service`: insights, jornada e conversa contextual
 
 ## Requisitos locais
 
-- Docker Desktop em execucao
-- Java 21 no `PATH`
-- Maven 3.9+ no `PATH`
+- Docker Desktop
+- Java 21
+- Maven 3.9+
 
-## Estrutura do repositorio
+## Subir tudo localmente
 
-```text
-.
-├── gateway-service
-├── services
-│   ├── auth-service
-│   ├── user-service
-│   ├── content-service
-│   ├── emotional-service
-│   ├── social-service
-│   ├── chat-service
-│   ├── subscription-service
-│   └── notification-service
-├── docker-compose.yml
-└── pom.xml
-```
-
-## Build local
-
-Build completo sem testes:
-
-```bash
-mvn -q -DskipTests package
-```
-
-Build de um modulo especifico:
-
-```bash
-mvn -q -pl services/auth-service -am -DskipTests package
-```
-
-## Subida com Docker
-
-Subir tudo em background:
-
-```bash
+```powershell
 docker compose up --build -d
-```
-
-Ver containers:
-
-```bash
 docker compose ps
 ```
 
-O ambiente local tambem sobe com seeds idempotentes de primeira experiencia:
+Parar:
 
-- admin seed: `clara@evolua.local / 123456`
-- usuario gratuito seed: `leo@evolua.local / 123456`
-- perfil, trilhas, check-ins, feed, conversas e notificacoes iniciais
-
-Logs consolidados:
-
-```bash
-docker compose logs -f
-```
-
-Parar ambiente:
-
-```bash
+```powershell
 docker compose down
 ```
 
-Parar e remover volumes:
+Resetar dados:
 
-```bash
+```powershell
 docker compose down -v
+docker compose up --build -d
 ```
 
 ## Portas
 
-- `8080`: gateway
-- `8081`: auth-service
-- `8082`: user-service
-- `8083`: content-service
-- `8084`: emotional-service
-- `8085`: social-service
-- `8086`: chat-service
-- `8087`: subscription-service
-- `8088`: notification-service
+- `8080` gateway
+- `8081` auth
+- `8082` user
+- `8083` content
+- `8084` emotional
+- `8085` social
+- `8086` chat
+- `8087` subscription
+- `8088` notification
+- `8089` ai
 
-Infra:
+## Seeds locais
 
-- PostgreSQL auth: container interno `5432`
-- PostgreSQL user: container interno `5432`
-- PostgreSQL content: container interno `5432`
-- PostgreSQL emotional: container interno `5432`
-- PostgreSQL subscription: container interno `5432`
-- Mongo social: container interno `27017`
-- Mongo chat: container interno `27017`
-- Redis: container interno `6379`
-
-## Dados Iniciais
-
-Os seeds sao voltados para desenvolvimento local e ajudam a evitar telas vazias logo no primeiro acesso.
-
-Usuario pronto para login:
-
-```bash
-curl -X POST http://localhost:8081/v1/public/auth/login ^
-  -H "Content-Type: application/json" ^
-  -d "{\"email\":\"clara@evolua.local\",\"password\":\"123456\"}"
-```
-
-Perfis iniciais:
-
-- `clara@evolua.local / 123456`: administrador com acesso premium e permissao para criar trilhas
-- `leo@evolua.local / 123456`: usuario gratuito com acesso apenas a trilhas essenciais
-
-Comunidades seed usadas no feed:
-
-- `geral`
-- `ansiedade`
-- `sono`
-- `rotina`
-- `mindfulness`
-- `autoconhecimento`
-
-Para limpar e recriar todos os dados iniciais:
-
-```bash
-docker compose down -v
-docker compose up --build -d
-```
+- admin: `clara@evolua.local / 123456`
+- usuario comum: `leo@evolua.local / 123456`
 
 ## Swagger
 
-- Gateway: `http://localhost:8080/swagger-ui.html`
-- Auth: `http://localhost:8081/swagger-ui.html`
-- User: `http://localhost:8082/swagger-ui.html`
-- Content: `http://localhost:8083/swagger-ui.html`
-- Emotional: `http://localhost:8084/swagger-ui.html`
-- Social: `http://localhost:8085/swagger-ui.html`
-- Chat: `http://localhost:8086/swagger-ui.html`
-- Subscription: `http://localhost:8087/swagger-ui.html`
-- Notification: `http://localhost:8088/swagger-ui.html`
+- `http://localhost:8080/swagger-ui.html`
+- `http://localhost:8081/swagger-ui.html`
+- `http://localhost:8082/swagger-ui.html`
+- `http://localhost:8083/swagger-ui.html`
+- `http://localhost:8084/swagger-ui.html`
+- `http://localhost:8085/swagger-ui.html`
+- `http://localhost:8086/swagger-ui.html`
+- `http://localhost:8087/swagger-ui.html`
+- `http://localhost:8088/swagger-ui.html`
+- `http://localhost:8089/swagger-ui.html`
 
 ## Health checks
 
-Exemplos:
-
-```bash
+```powershell
+curl http://localhost:8080/actuator/health
 curl http://localhost:8081/actuator/health
-curl http://localhost:8082/actuator/health
 curl http://localhost:8083/actuator/health
+curl http://localhost:8087/actuator/health
+curl http://localhost:8089/actuator/health
 ```
 
-## Fluxo basico de teste manual
+## Fluxos principais de API
 
-### 1. Registrar usuario
+### Autenticacao
 
-```bash
-curl -X POST http://localhost:8081/v1/public/auth/register ^
-  -H "Content-Type: application/json" ^
-  -d "{\"email\":\"teste@evolua.local\",\"password\":\"123456\"}"
+- `POST /v1/public/auth/register` com `displayName`
+- `POST /v1/public/auth/login`
+- `POST /v1/public/auth/refresh`
+- `GET /v1/auth/me`
+
+### Trilhas e jornada
+
+- `GET /v1/trails`
+- `POST /v1/trails` admin
+- `GET /v1/trails/journey/current`
+- `POST /v1/trails/internal/journey/current`
+
+### Check-in
+
+- `GET /v1/check-ins`
+- `POST /v1/check-ins`
+
+### Reflexoes e espacos
+
+- `GET /v1/posts`
+- `POST /v1/posts`
+- `GET /v1/communities`
+- `POST /v1/communities`
+- `POST /v1/communities/{id}/join`
+- `POST /v1/communities/{id}/leave`
+
+### Chat
+
+- `GET /v1/messages`
+- `POST /v1/messages`
+- WebSocket STOMP: `ws://localhost:8086/ws/chat`
+
+### Assinaturas
+
+- `GET /v1/plans`
+- `GET /v1/subscription/current`
+- `GET /v1/subscriptions`
+- `POST /v1/billing/checkout`
+- `GET /v1/billing/checkout/{checkoutId}`
+- `POST /v1/subscription/cancel`
+- `POST /v1/public/billing/mercadopago/webhook`
+
+### Perfil
+
+- `GET /v1/profiles/me`
+- `PUT /v1/profiles/me`
+- `POST /v1/profiles/me/avatar`
+- `GET /v1/public/profiles/avatar/{fileName}`
+
+O perfil principal agora concentra `displayName`, `birthDate`, `gender`, `customGender`, `avatarUrl`, `bio` e `journeyLevel`.
+
+### Notificacoes
+
+- `GET /v1/notifications`
+- `GET /v1/notifications/unread-count`
+- `POST /v1/notifications/{id}/read`
+- `POST /v1/notifications/read-all`
+- `POST /v1/admin/notifications` admin
+
+## Variaveis importantes
+
+### Google login
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI`
+- `GOOGLE_ALLOWED_FRONTEND_ORIGIN_PATTERNS`
+
+### IA
+
+- `AI_PROVIDER`
+- `AI_API_KEY`
+- `AI_BASE_URL`
+- `AI_MODEL`
+- `AI_LANGUAGE`
+- `AI_MAX_TOKENS`
+
+### Billing
+
+- `APP_BILLING_PROVIDER`
+- `APP_BILLING_FRONTEND_BASE_URL`
+- `APP_BILLING_PUBLIC_BASE_URL`
+- `APP_BILLING_INTERNAL_TOKEN`
+- `MERCADO_PAGO_BASE_URL`
+- `MERCADO_PAGO_ACCESS_TOKEN`
+- `MERCADO_PAGO_WEBHOOK_SECRET`
+
+### Avatar e perfil
+
+- `APP_PROFILE_AVATAR_STORAGE_PATH`
+
+## Observacoes importantes
+
+- O checkout premium so libera o acesso premium depois da confirmacao do backend.
+- O `content-service` consulta o `subscription-service` internamente para validar acesso premium.
+- Para producao com Mercado Pago, `APP_BILLING_PUBLIC_BASE_URL` precisa apontar para uma URL publica valida para webhook.
+- O fluxo de Google Login ainda deve ser tratado como validacao final manual antes de go-live.
+- O avatar do usuario e salvo pelo `user-service` em storage local persistido por volume Docker.
+
+## Qualidade
+
+Build:
+
+```powershell
+mvn -q -DskipTests package
 ```
 
-### 2. Fazer login
+Compilar modulos principais:
 
-```bash
-curl -X POST http://localhost:8081/v1/public/auth/login ^
-  -H "Content-Type: application/json" ^
-  -d "{\"email\":\"teste@evolua.local\",\"password\":\"123456\"}"
+```powershell
+mvn -pl services/auth-service,services/content-service,services/emotional-service,services/social-service,services/chat-service,services/subscription-service,services/notification-service,services/ai-service -am -DskipTests compile
 ```
 
-Copie o `accessToken` retornado.
+Testes:
 
-### 3. Criar perfil
-
-```bash
-curl -X POST http://localhost:8082/v1/profiles ^
-  -H "Authorization: Bearer SEU_ACCESS_TOKEN" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"displayName\":\"Teste\",\"bio\":\"Perfil inicial\",\"journeyLevel\":1,\"premium\":false}"
-```
-
-### 4. Listar perfil
-
-```bash
-curl http://localhost:8082/v1/profiles ^
-  -H "Authorization: Bearer SEU_ACCESS_TOKEN"
-```
-
-### 5. Criar trilha como admin
-
-```bash
-curl -X POST http://localhost:8083/v1/trails ^
-  -H "Authorization: Bearer SEU_ACCESS_TOKEN" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"title\":\"Respiracao\",\"description\":\"Trilha inicial\",\"category\":\"ansiedade\",\"premium\":false}"
-```
-
-### 6. Criar check-in emocional
-
-```bash
-curl -X POST http://localhost:8084/v1/check-ins ^
-  -H "Authorization: Bearer SEU_ACCESS_TOKEN" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"mood\":\"calmo\",\"reflection\":\"Dia produtivo\",\"energyLevel\":7,\"recommendedPractice\":\"respiracao guiada\"}"
-```
-
-### 7. Criar post
-
-```bash
-curl -X POST http://localhost:8085/v1/posts ^
-  -H "Authorization: Bearer SEU_ACCESS_TOKEN" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"content\":\"Primeiro post\",\"community\":\"geral\",\"visibility\":\"PUBLIC\"}"
-```
-
-### 8. Criar mensagem
-
-```bash
-curl -X POST http://localhost:8086/v1/messages ^
-  -H "Authorization: Bearer SEU_ACCESS_TOKEN" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"recipientId\":\"user-2\",\"content\":\"Ola\"}"
-```
-
-### 9. Criar assinatura
-
-```bash
-curl -X POST http://localhost:8087/v1/subscriptions ^
-  -H "Authorization: Bearer SEU_ACCESS_TOKEN" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"planCode\":\"premium-monthly\",\"status\":\"ACTIVE\",\"billingCycle\":\"MONTHLY\",\"premium\":true}"
-```
-
-### 10. Criar notificacao
-
-```bash
-curl -X POST http://localhost:8088/v1/notifications ^
-  -H "Authorization: Bearer SEU_ACCESS_TOKEN" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"channel\":\"EMAIL\",\"message\":\"Lembrete diario\"}"
-```
-
-## WebSocket de chat
-
-Endpoint STOMP:
-
-```text
-ws://localhost:8086/ws/chat
-```
-
-Destino para envio:
-
-```text
-/app/chat.send
-```
-
-Topico de recebimento:
-
-```text
-/topic/chat/{recipientId}
-```
-
-Payload esperado:
-
-```json
-{
-  "senderId": "user-1",
-  "recipientId": "user-2",
-  "content": "Ola"
-}
-```
-
-## Testes automatizados
-
-Executar todos:
-
-```bash
+```powershell
 mvn test
 ```
 
-Executar um modulo:
+## Documentos complementares
 
-```bash
-mvn -pl services/auth-service test
-```
-
-## Troubleshooting
-
-Imagem Docker nao encontrada:
-
-- confirme que os `Dockerfile`s usam `maven:3.9.9-eclipse-temurin-21`
-- confirme que os `Dockerfile`s usam `eclipse-temurin:21-jre`
-
-Porta ocupada:
-
-- pare containers antigos com `docker compose down`
-- revise processos locais usando as portas `8080` a `8088`
-
-Falha de autenticacao:
-
-- gere um novo token via `/v1/public/auth/login`
-- envie `Authorization: Bearer <token>`
-
-Erro `403` ao criar trilha:
-
-- confirme que o token pertence ao admin `clara@evolua.local`
-- usuarios gratuitos nao podem criar trilhas
-
-Erro de banco:
-
-- recrie o ambiente com `docker compose down -v`
-- suba novamente com `docker compose up --build -d`
-
-## Observacoes
-
-- O projeto esta padronizado para Java 21.
-- O gateway apenas roteia as chamadas para os microsservicos internos.
-- Os serviços expõem Swagger individualmente para facilitar desenvolvimento e validação.
+- [manual-validation-matrix.md](./docs/manual-validation-matrix.md)
+- [production-go-live.md](./docs/production-go-live.md)
+- [cloud-azure-aws-free-tier.md](./docs/cloud-azure-aws-free-tier.md)

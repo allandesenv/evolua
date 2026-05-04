@@ -3,19 +3,25 @@ package com.evolua.ai.application;
 import com.evolua.ai.config.AiProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.text.Normalizer;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 @Service
 public class JourneyChatService {
+  private static final Logger log = LoggerFactory.getLogger(JourneyChatService.class);
+
   private final AiProperties aiProperties;
   private final ContentCatalogClient contentCatalogClient;
   private final EmotionalContextClient emotionalContextClient;
@@ -95,6 +101,7 @@ public class JourneyChatService {
       }
       return new JourneyChatResponse(reply, responseRisk, suggestedNextStep, false);
     } catch (Exception exception) {
+      logAiFallback(exception);
       return fallbackReply(normalizedMessage, currentJourney, emotionalContext, riskLevel, true);
     }
   }
@@ -303,36 +310,132 @@ public class JourneyChatService {
       EmotionalContextSnapshot emotionalContext,
       String riskLevel,
       boolean fallbackUsed) {
-    var journeyTitle = currentJourney == null || isBlank(currentJourney.title()) ? "sua jornada atual" : currentJourney.title();
+    var normalized = normalize(message);
+    var hasJourney = currentJourney != null && !isBlank(currentJourney.title());
+    var journeyTitle = hasJourney ? currentJourney.title() : "";
     var sections = currentJourney == null ? Map.<String, String>of() : JourneyMarkdownSections.extract(currentJourney.content());
     var direction = truncate(sections.getOrDefault("Direcao da jornada", ""), 180);
     var lastCheckIn = emotionalContext == null || emotionalContext.recentCheckIns() == null || emotionalContext.recentCheckIns().isEmpty()
         ? null
         : emotionalContext.recentCheckIns().getFirst();
-    var recentReflection =
-        lastCheckIn == null || isBlank(lastCheckIn.reflection()) ? "" : narrativeDetail(lastCheckIn.reflection());
-    var detail = narrativeDetail(message);
-    var pattern =
-        emotionalContext == null
-            ? ""
-            : " Seu padrao recente mostra energia em torno de "
-                + safeString(emotionalContext.averageEnergy() == null ? "" : emotionalContext.averageEnergy().toString())
-                + " e um ritmo "
-                + safeString(emotionalContext.energyTrendLabel())
-                + ".";
-    var reply =
-        "Voce trouxe "
-            + detail
-            + (recentReflection.isBlank()
-                ? ", entao vou te responder pelo caminho mais seguro e util agora: conecte isso com "
-                : ", e isso conversa com o que apareceu no seu check-in recente sobre " + recentReflection + ". Conecte isso com ")
-            + journeyTitle
-            + " e escolha uma acao pequena antes de tentar resolver tudo."
-            + pattern
-            + (direction.isBlank() ? "" : " A direcao mais util agora e: " + direction + ".")
-            + "\n\n"
-            + "Se quiser continuar, me diga o que ficou mais dificil neste passo e eu ajudo a transformar isso em um movimento mais simples, com base no que voce realmente viveu hoje.";
-    return new JourneyChatResponse(reply, riskLevel, "Escolha um exercicio da jornada e pratique por 10 minutos.", fallbackUsed);
+    var recentReflection = lastCheckIn == null || isBlank(lastCheckIn.reflection()) ? "" : lastCheckIn.reflection().trim();
+
+    if ("medium".equals(riskLevel)) {
+      return new JourneyChatResponse(
+          "Vamos reduzir a intensidade antes de tentar entender tudo. Coloque os pes no chao, solte os ombros e faca tres respiracoes mais lentas do que o normal.\n\nDepois disso, me diga o que esta mais forte agora: medo no corpo, pressa nos pensamentos ou vontade de fugir da situacao.",
+          riskLevel,
+          "Faca tres respiracoes lentas e nomeie a sensacao mais forte no corpo.",
+          fallbackUsed);
+    }
+
+    if (isMeditationRequest(normalized)) {
+      var contextLine =
+          recentReflection.isBlank()
+              ? "Como voce pediu algo para agora, eu escolheria uma pratica curta, simples e com pouca exigencia."
+              : "Como seu contexto recente fala de " + summarizeDetail(recentReflection) + ", eu escolheria uma pratica curta e bem aterrada.";
+      return new JourneyChatResponse(
+          contextLine
+              + "\n\nExperimente uma meditacao de 3 minutos: sente-se de um jeito confortavel, perceba tres pontos de contato do corpo, acompanhe o ar entrando e saindo, e quando a mente puxar assunto, diga mentalmente: \"agora eu volto\".\n\nQuando terminar, me conte se voce ficou mais calmo, mais inquieto ou apenas um pouco mais presente.",
+          riskLevel,
+          "Faca 3 minutos de respiracao com atencao nos pontos de contato do corpo.",
+          fallbackUsed);
+    }
+
+    if (isSadOrIntrusive(normalized)) {
+      return new JourneyChatResponse(
+          "Sinto que hoje esta pesado, especialmente porque pensamentos intrusivos costumam dar a impressao de urgencia mesmo quando voce nao precisa resolver tudo agora.\n\nVamos separar voce dos pensamentos por um momento: escolha um pensamento que apareceu e complete a frase \"minha mente esta dizendo que...\". Isso ajuda a observar sem obedecer automaticamente.\n\nDepois me diga qual pensamento voltou com mais forca, e eu te ajudo a montar um passo bem pequeno para atravessar os proximos minutos.",
+          riskLevel,
+          "Use a frase \"minha mente esta dizendo que...\" para observar um pensamento sem agir por impulso.",
+          fallbackUsed);
+    }
+
+    if (!hasJourney && isConversationOnly(normalized)) {
+      return new JourneyChatResponse(
+          "Pode ser so conversa, sim. A gente nao precisa transformar tudo em trilha agora.\n\nPara eu te acompanhar melhor, me conta por onde voce quer comecar: algo que aconteceu hoje, uma sensacao no corpo, ou uma preocupacao que ficou repetindo na cabeca?",
+          riskLevel,
+          "Escolha um ponto de partida: acontecimento, sensacao no corpo ou preocupacao recorrente.",
+          fallbackUsed);
+    }
+
+    if (isAdaptationRequest(normalized) && hasJourney) {
+      var directionLine =
+          direction.isBlank()
+              ? "A ideia e preservar o sentido da sua jornada sem aumentar a carga."
+              : "A direcao da sua jornada aponta para: " + direction + ".";
+      return new JourneyChatResponse(
+          "Vamos adaptar sem perder o fio da meada. " + directionLine + "\n\nEscolha a menor versao possivel do exercicio: em vez de fazer tudo, faca apenas o primeiro minuto, a primeira pergunta ou a primeira anotacao. O objetivo agora e recuperar movimento, nao desempenho.\n\nSe quiser, me diga qual exercicio voce esta tentando adaptar e quanto tempo real voce tem hoje.",
+          riskLevel,
+          "Reduza o exercicio para uma primeira acao de 1 minuto.",
+          fallbackUsed);
+    }
+
+    if (hasJourney) {
+      var journeyLine =
+          direction.isBlank()
+              ? "A sua jornada atual pode servir como mapa, mas o ritmo precisa caber no seu dia."
+              : "Para hoje, eu usaria esta direcao da jornada como norte: " + direction + ".";
+      return new JourneyChatResponse(
+          journeyLine
+              + "\n\nEm vez de tentar resolver tudo, escolha uma parte pequena do que voce escreveu e transforme em uma pergunta pratica: \"qual e o proximo gesto possivel?\".\n\nMe diga onde voce sente mais resistencia agora, e eu ajusto o passo com voce.",
+          riskLevel,
+          "Transforme o momento em uma pergunta: qual e o proximo gesto possivel?",
+          fallbackUsed);
+    }
+
+    return new JourneyChatResponse(
+        "Estou com voce. Pelo que aparece agora, vale comecar clareando o momento antes de escolher qualquer caminho.\n\nMe responda com uma frase simples: o que esta pedindo mais atencao hoje, seu corpo, seus pensamentos ou uma decisao que ficou em aberto?",
+        riskLevel,
+        "Nomeie o foco principal de agora: corpo, pensamentos ou decisao em aberto.",
+        fallbackUsed);
+  }
+
+  private void logAiFallback(Exception exception) {
+    if (exception instanceof RestClientResponseException responseException) {
+      log.warn(
+          "Journey chat OpenAI request failed; using fallback. status={} code={} exception={}",
+          responseException.getStatusCode().value(),
+          extractOpenAiErrorCode(responseException.getResponseBodyAsString()),
+          exception.getClass().getSimpleName());
+      return;
+    }
+
+    log.warn(
+        "Journey chat OpenAI request failed; using fallback. exception={}",
+        exception.getClass().getSimpleName());
+  }
+
+  @SuppressWarnings("unchecked")
+  private String extractOpenAiErrorCode(String responseBody) {
+    try {
+      var payload = objectMapper.readValue(safeString(responseBody), Map.class);
+      var error = payload.get("error");
+      if (error instanceof Map<?, ?> errorMap) {
+        var code = stringValue(errorMap.get("code"));
+        if (!code.isBlank()) {
+          return code;
+        }
+        return stringValue(errorMap.get("type"));
+      }
+    } catch (Exception ignored) {
+      return "";
+    }
+    return "";
+  }
+
+  private boolean isMeditationRequest(String normalized) {
+    return containsAny(normalized, List.of("meditacao", "meditar", "respiracao", "acalmar agora", "me acalmar"));
+  }
+
+  private boolean isSadOrIntrusive(String normalized) {
+    return containsAny(normalized, List.of("triste", "pensamento intrusivo", "pensamentos intrusivos", "ruminando", "angustia"));
+  }
+
+  private boolean isConversationOnly(String normalized) {
+    return containsAny(normalized, List.of("nao iniciei", "sem jornada", "batendo um papo", "so conversar", "so conversa", "apenas conversar"));
+  }
+
+  private boolean isAdaptationRequest(String normalized) {
+    return containsAny(normalized, List.of("adaptar", "adaptacao", "exercicio", "trilha", "pouco tempo", "travei"));
   }
 
   private String classifyRisk(String value) {
@@ -378,22 +481,23 @@ public class JourneyChatService {
   }
 
   private String normalize(String value) {
-    return safeString(value).toLowerCase(Locale.ROOT);
+    var normalized = Normalizer.normalize(safeString(value), Normalizer.Form.NFD);
+    return normalized.replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT);
   }
 
-  private String narrativeDetail(String message) {
+  private String summarizeDetail(String message) {
     if (message == null || message.isBlank()) {
       return "algo importante do seu momento";
     }
     var cleaned = message.trim().replaceAll("\\s+", " ");
     if (cleaned.length() <= 80) {
-      return "\"" + cleaned + "\"";
+      return cleaned;
     }
     var truncated = cleaned.substring(0, 80);
     var lastSpace = truncated.lastIndexOf(' ');
     if (lastSpace > 20) {
       truncated = truncated.substring(0, lastSpace);
     }
-    return "\"" + truncated + "...\"";
+    return truncated + "...";
   }
 }
