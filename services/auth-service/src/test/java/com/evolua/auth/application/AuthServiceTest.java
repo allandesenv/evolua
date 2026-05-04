@@ -43,12 +43,12 @@ class AuthServiceTest {
   }
 
   @Test
-  void loginShouldInformWhenUserDoesNotExist() {
+  void loginShouldUseSafeMessageWhenUserDoesNotExist() {
     when(authUserRepository.findByEmail("ghost@evolua.app")).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> authService.login("ghost@evolua.app", "123456"))
-        .isInstanceOf(UserNotFoundException.class)
-        .hasMessage("Usuario nao existe.");
+        .isInstanceOf(InvalidCredentialsException.class)
+        .hasMessage("Credenciais invalidas.");
   }
 
   @Test

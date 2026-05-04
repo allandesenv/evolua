@@ -69,6 +69,41 @@ public class TrailController {
         .body(ApiResponse.success(201, "Created", toResponse(created, true)));
   }
 
+  @PutMapping("/{trailId}")
+  @Operation(summary = "Update Trail")
+  public ResponseEntity<ApiResponse<TrailResponse>> update(
+      @PathVariable Long trailId, @Valid @RequestBody TrailRequest request) {
+    var currentUser = currentUserProvider.getCurrentUser();
+    if (!isAdmin(currentUser.roles())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only administrators can update trails");
+    }
+
+    validateRequest(request);
+
+    var updated =
+        service.update(
+            trailId,
+            request.title().trim(),
+            request.summary().trim(),
+            request.content().trim(),
+            request.category().trim(),
+            request.premium(),
+            normalizeMediaLinks(request.mediaLinks()));
+    return ResponseEntity.ok(ApiResponse.success(200, "Updated", toResponse(updated, true)));
+  }
+
+  @DeleteMapping("/{trailId}")
+  @Operation(summary = "Delete Trail")
+  public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long trailId) {
+    var currentUser = currentUserProvider.getCurrentUser();
+    if (!isAdmin(currentUser.roles())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only administrators can delete trails");
+    }
+
+    service.delete(trailId);
+    return ResponseEntity.ok(ApiResponse.success(200, "Deleted", null));
+  }
+
   @GetMapping
   @Operation(summary = "List trails")
   public ResponseEntity<ApiResponse<PageResponse<TrailResponse>>> list(

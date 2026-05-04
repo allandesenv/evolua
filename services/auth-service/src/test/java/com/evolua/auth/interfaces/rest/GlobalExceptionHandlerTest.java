@@ -16,7 +16,7 @@ class GlobalExceptionHandlerTest {
     var response = handler.handleUserNotFound(new UserNotFoundException("Usuario nao existe."));
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-    assertThat(response.getBody().details()).containsExactly("Usuario nao existe.");
+    assertThat(response.getBody().details()).containsExactly("Credenciais invalidas.");
   }
 
   @Test

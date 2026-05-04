@@ -8,6 +8,8 @@ public interface TrailRepository {
 
   Trail findById(Long id);
 
+  void deleteById(Long id);
+
   Page<Trail> findAll(
       String userId, Pageable pageable, String search, String category, Boolean premium);
 

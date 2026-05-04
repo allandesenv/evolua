@@ -49,6 +49,11 @@ public class TrailPersistenceAdapter implements TrailRepository {
     return repository.findById(id).map(this::toDomain).orElse(null);
   }
 
+  @Override
+  public void deleteById(Long id) {
+    repository.deleteById(id);
+  }
+
   public Page<Trail> findAll(
       String userId, Pageable pageable, String search, String category, Boolean premium) {
     Specification<TrailEntity> specification = Specification.where(null);

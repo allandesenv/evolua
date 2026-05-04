@@ -10,6 +10,15 @@ import org.springframework.stereotype.Component;
 public class RuleBasedWellBeingInsightGenerator implements WellBeingInsightGenerator {
   private final CuratedJourneyLinkLibrary linkLibrary;
 
+  private enum CheckInTheme {
+    ANXIETY,
+    FATIGUE,
+    PRODUCTIVITY,
+    SADNESS,
+    CLARITY,
+    GENERAL
+  }
+
   public RuleBasedWellBeingInsightGenerator(CuratedJourneyLinkLibrary linkLibrary) {
     this.linkLibrary = linkLibrary;
   }
@@ -70,7 +79,7 @@ public class RuleBasedWellBeingInsightGenerator implements WellBeingInsightGener
         riskLevel,
         chosenTrail == null ? null : chosenTrail.id(),
         generatedTrail.title(),
-        buildTrailReason(chosenTrail, context, riskLevel, hasFreeText, generatedTrail.title()),
+        buildTrailReason(chosenTrail, currentCheckIn, riskLevel, hasFreeText, generatedTrail.title()),
         suggestedSpace == null
             ? null
             : new SuggestedSpace(
@@ -113,6 +122,12 @@ public class RuleBasedWellBeingInsightGenerator implements WellBeingInsightGener
         || (currentCheckIn.energyLevel() != null && currentCheckIn.energyLevel() >= 6)) {
       keywords.addAll(List.of("foco", "clareza", "constancia", "rotina", "presenca"));
     }
+    if (containsAny(text, List.of("produtiv", "resolvi", "consegui", "tarefa", "entreg"))) {
+      keywords.addAll(List.of("foco", "clareza", "constancia", "rotina", "acao"));
+    }
+    if (containsAny(text, List.of("triste", "desanim", "chatead", "sozinh", "frustr"))) {
+      keywords.addAll(List.of("acolh", "presenca", "sentido", "cuidado", "pausa"));
+    }
     if (keywords.isEmpty()) {
       keywords.addAll(List.of("ritmo", "presenca", "foco"));
     }
@@ -139,95 +154,101 @@ public class RuleBasedWellBeingInsightGenerator implements WellBeingInsightGener
       EmotionalContextSnapshot context,
       String riskLevel,
       boolean hasFreeText) {
-    var mood = normalize(currentCheckIn.mood());
-    var trend = context.energyTrendLabel() == null ? "estavel" : context.energyTrendLabel();
-    var averageEnergy = context.averageEnergy() == null ? currentCheckIn.energyLevel() : context.averageEnergy();
-    var detail = narrativeDetail(currentCheckIn.reflection());
-    var moodLabel = currentCheckIn.mood() == null || currentCheckIn.mood().isBlank() ? "seu estado atual" : currentCheckIn.mood().trim();
+    var theme = inferTheme(currentCheckIn);
+    var energy = safeEnergyLabel(currentCheckIn.energyLevel());
 
     if ("medium".equals(riskLevel)) {
-      return hasFreeText
-          ? "Voce nomeou "
-              + detail
-              + ", e isso combina com um momento de tensao real. Com a energia em "
-              + safeEnergyLabel(currentCheckIn.energyLevel())
-              + ", o mais util agora e baixar a carga e escolher uma resposta pequena, reguladora e viavel."
-          : "Seu check-in mostra tensao relevante agora, com um padrao recente "
-              + trend
-              + ". Vale reduzir a carga e escolher uma proxima acao curta antes de tentar resolver tudo.";
+      return "Seu check-in indica tensao relevante agora. Com energia em "
+          + energy
+          + ", a resposta mais util e reduzir a carga, regular o corpo e escolher uma unica acao pequena antes de tentar resolver o restante.";
     }
-    if (mood.contains("ans")) {
-      return hasFreeText
-          ? "Quando voce fala de "
-              + detail
-              + ", aparece um sistema mais ativado do que disponivel para desempenho. Seu historico recente sugere que regulacao vem antes de produtividade neste ponto."
-          : "Seu registro de "
-              + moodLabel
-              + " somado ao historico recente sugere ativacao emocional alta. Faz mais sentido regular o corpo e a atencao antes de cobrar rendimento.";
-    }
-    if (mood.contains("cans")) {
-      return hasFreeText
-          ? "O que voce descreveu em "
-              + detail
-              + " combina com desgaste real, nao com falta de vontade. Seu corpo parece pedir recuperacao e ritmo, entao o melhor proximo passo agora precisa ser leve e sustentavel."
-          : "Sua energia e o historico recente apontam necessidade de recuperacao. O melhor proximo passo agora e algo leve, repetivel e sem aumentar a cobranca.";
-    }
-    if (hasFreeText) {
-      return "No trecho em que voce fala de "
-          + detail
-          + ", aparece um desejo de seguir sem se atropelar. Seu historico recente mostra um ritmo "
-          + trend
-          + " e energia media em torno de "
-          + safeEnergyLabel(averageEnergy)
-          + ".";
-    }
-    return "Seu check-in indica uma base razoavel para seguir com constancia, sem precisar ampliar demais o passo agora. O padrao recente mostra um ritmo "
-        + trend
-        + " e energia media em torno de "
-        + safeEnergyLabel(averageEnergy)
-        + ".";
+
+    return switch (theme) {
+      case ANXIETY ->
+          "Seu check-in aponta ativacao mental e emocional. O foco agora nao e resolver tudo de uma vez, e sim baixar o ritmo interno para recuperar clareza e poder escolher o proximo passo.";
+      case FATIGUE ->
+          "Seu registro aponta desgaste e necessidade de recuperacao. O melhor caminho para hoje e diminuir a exigencia, proteger energia e retomar em um ritmo pequeno o bastante para ser sustentavel.";
+      case PRODUCTIVITY ->
+          "Seu check-in mostra um momento de avanco e capacidade de fechamento. Para aproveitar essa energia sem se atropelar, vale consolidar o que ja foi resolvido e escolher apenas a proxima frente clara.";
+      case SADNESS ->
+          "Seu registro sugere um momento emocional mais sensivel. Antes de transformar isso em cobranca, vale acolher o que esta presente e escolher uma microacao de cuidado que devolva um pouco de apoio.";
+      case CLARITY ->
+          "Seu check-in indica uma base favoravel para clareza e continuidade. O cuidado agora e sustentar essa direcao com simplicidade, sem abrir tarefas demais nem endurecer o ritmo.";
+      case GENERAL ->
+          hasFreeText
+              ? "Seu check-in traz um sinal importante sobre o momento atual. A direcao mais segura e transformar essa percepcao em uma acao pequena, concreta e compativel com sua energia."
+              : "Seu check-in foi registrado com energia em "
+                  + energy
+                  + ". Com pouco contexto textual, a melhor leitura e comecar por uma acao simples e observar como seu corpo responde.";
+    };
   }
 
   private String buildSuggestedAction(
       CurrentCheckInInput currentCheckIn, String trailTitle, boolean hasFreeText, String riskLevel) {
-    var detail = narrativeDetail(currentCheckIn.reflection());
+    var theme = inferTheme(currentCheckIn);
     if ("medium".equals(riskLevel)) {
-      return hasFreeText
-          ? "Como " + detail + " ainda pesa agora, comece pelos primeiros 10 minutos da jornada e adie decisoes maiores ate sentir mais estabilidade."
-          : "Comece pelos primeiros 10 minutos da jornada antes de decidir o restante do dia.";
+      return "Faca uma pausa de 3 minutos, escolha uma unica pendencia pequena e deixe decisoes maiores para depois de se estabilizar.";
     }
-    if (currentCheckIn.energyLevel() != null && currentCheckIn.energyLevel() <= 4) {
-      return hasFreeText
-          ? "Respeite o ritmo de " + detail + " e inicie a jornada em modo leve, sem aumentar exigencia hoje."
-          : "Sua energia sugere comecar pequeno: inicie a jornada em ritmo leve e observe a resposta do corpo.";
+    if (currentCheckIn.energyLevel() != null
+        && currentCheckIn.energyLevel() <= 4
+        && theme != CheckInTheme.PRODUCTIVITY) {
+      return "Comece em modo leve: reduza uma exigencia, faca uma pausa curta e escolha uma acao que caiba em ate 10 minutos.";
     }
-    if (normalize(currentCheckIn.mood()).contains("ans")) {
-      return hasFreeText
-          ? "Use o que voce contou sobre " + detail + " como ponto de partida e comece pelo primeiro bloco da jornada, com respiracao e ancoragem."
-          : "Comece pelo primeiro bloco da jornada com respiracao e ancoragem, e use isso para decidir o resto do dia.";
-    }
-    return hasFreeText
-        ? "Pegue o que apareceu em " + detail + " e transforme isso em uma unica frente clara hoje, com apoio da jornada privada."
-        : "Use a jornada " + trailTitle + " como proximo passo unico, apoiando-se no seu padrao recente.";
+
+    return switch (theme) {
+      case ANXIETY ->
+          "Antes de agir, faca 4 ciclos de respiracao lenta e escreva a unica decisao que realmente precisa de atencao agora.";
+      case FATIGUE ->
+          "Proteja energia: escolha uma tarefa minima, defina um limite de 10 minutos e encerre sem abrir novas frentes.";
+      case PRODUCTIVITY ->
+          "Feche o ciclo: registre o que foi concluido, escolha a proxima prioridade e bloqueie novas tarefas por alguns minutos.";
+      case SADNESS ->
+          "Escolha uma microacao de cuidado: agua, banho, mensagem para alguem seguro ou 5 linhas sobre o que voce precisa agora.";
+      case CLARITY ->
+          "Use a jornada " + trailTitle + " para transformar a clareza atual em uma acao simples e bem delimitada.";
+      case GENERAL ->
+          hasFreeText
+              ? "Transforme a percepcao do check-in em uma unica acao concreta para hoje, pequena o suficiente para ser terminada."
+              : "Escolha uma pratica curta da jornada e volte ao check-in depois para observar o que mudou.";
+    };
   }
 
   private String buildTrailReason(
       TrailCandidate chosenTrail,
-      EmotionalContextSnapshot context,
+      CurrentCheckInInput currentCheckIn,
       String riskLevel,
       boolean hasFreeText,
       String generatedTitle) {
-    var trend = context.energyTrendLabel() == null ? "mais estavel" : context.energyTrendLabel();
+    var theme = inferTheme(currentCheckIn);
     if ("medium".equals(riskLevel)) {
       return "A jornada foi desenhada para apoiar regulacao e retomada gradual, sem aumentar a exigencia enquanto seu sistema ainda pede cuidado.";
     }
     if (chosenTrail != null && hasFreeText) {
-      return "A trilha privada segue o mesmo eixo de cuidado que ja aparece em \""
-          + chosenTrail.title()
-          + "\" e conversa diretamente com o que voce trouxe no relato.";
+      return "A trilha privada foi escolhida por combinar com o tema central do check-in e oferecer um proximo passo pratico, sem depender de um plano longo.";
     }
     if (hasFreeText) {
-      return "A jornada " + generatedTitle + " conversa com o contexto que voce descreveu e combina com o seu ritmo recente " + trend + ".";
+      return switch (theme) {
+        case PRODUCTIVITY ->
+            "A jornada "
+                + generatedTitle
+                + " ajuda a transformar produtividade em fechamento claro, evitando abrir frentes demais.";
+        case ANXIETY ->
+            "A jornada "
+                + generatedTitle
+                + " prioriza regulacao e clareza antes de tentar resolver tudo de uma vez.";
+        case FATIGUE ->
+            "A jornada "
+                + generatedTitle
+                + " foi pensada para recuperar ritmo sem aumentar a cobranca.";
+        case SADNESS ->
+            "A jornada "
+                + generatedTitle
+                + " oferece acolhimento pratico e uma microacao de cuidado para hoje.";
+        default ->
+            "A jornada "
+                + generatedTitle
+                + " traduz o check-in atual em passos pequenos e consistentes.";
+      };
     }
     return "A jornada " + generatedTitle + " foi montada para sustentar seu estado atual com mais constancia e menos pressao.";
   }
@@ -418,6 +439,12 @@ public class RuleBasedWellBeingInsightGenerator implements WellBeingInsightGener
         || (currentCheckIn.energyLevel() != null && currentCheckIn.energyLevel() >= 7)) {
       return "clareza-e-acao";
     }
+    if (containsAny(text, List.of("produtiv", "resolvi", "consegui", "tarefa", "entreg"))) {
+      return "clareza-e-acao";
+    }
+    if (containsAny(text, List.of("triste", "desanim", "chatead", "sozinh", "frustr"))) {
+      return "reorientacao-consciente";
+    }
     return "reorientacao-consciente";
   }
 
@@ -458,21 +485,30 @@ public class RuleBasedWellBeingInsightGenerator implements WellBeingInsightGener
     return value == null ? "" : value.toLowerCase(Locale.ROOT);
   }
 
-  private String narrativeDetail(String reflection) {
-    if (reflection == null || reflection.isBlank()) {
-      return "o que voce esta vivendo";
+  private CheckInTheme inferTheme(CurrentCheckInInput currentCheckIn) {
+    var text = normalize(currentCheckIn.mood()) + " " + normalize(currentCheckIn.reflection());
+    if (containsAny(text, List.of("ansios", "panico", "sobrecarga", "pressionad", "culpa", "acelerad"))) {
+      return CheckInTheme.ANXIETY;
     }
-
-    var cleaned = reflection.trim().replaceAll("\\s+", " ");
-    if (cleaned.length() <= 90) {
-      return "\"" + cleaned + "\"";
+    if (containsAny(text, List.of("produtiv", "resolvi", "consegui", "tarefa", "entreg", "avancei"))) {
+      return CheckInTheme.PRODUCTIVITY;
     }
-
-    var truncated = cleaned.substring(0, 90);
-    var lastSpace = truncated.lastIndexOf(' ');
-    if (lastSpace > 30) {
-      truncated = truncated.substring(0, lastSpace);
+    if (containsAny(text, List.of("cans", "exaust", "sono", "sem energia", "esgot"))) {
+      return CheckInTheme.FATIGUE;
     }
-    return "\"" + truncated + "...\"";
+    if (containsAny(text, List.of("triste", "desanim", "chatead", "sozinh", "frustr", "mal"))) {
+      return CheckInTheme.SADNESS;
+    }
+    if (containsAny(text, List.of("calmo", "presente", "clareza", "foco", "tranquil"))) {
+      return CheckInTheme.CLARITY;
+    }
+    if (currentCheckIn.energyLevel() != null && currentCheckIn.energyLevel() <= 4) {
+      return CheckInTheme.FATIGUE;
+    }
+    if (currentCheckIn.energyLevel() != null && currentCheckIn.energyLevel() >= 7) {
+      return CheckInTheme.CLARITY;
+    }
+    return CheckInTheme.GENERAL;
   }
+
 }
