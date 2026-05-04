@@ -1,6 +1,8 @@
 package com.evolua.ai.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
@@ -138,8 +140,118 @@ class JourneyChatServiceTest {
             7L);
 
     assertTrue(result.fallbackUsed());
-    assertTrue(result.reply().contains("Dormi pouco e fiquei esgotado"));
+    assertFalse(result.reply().startsWith("Voce trouxe"));
     assertTrue(result.reply().contains("Reduzir a carga e voltar ao corpo"));
-    assertTrue(result.reply().contains("Recuperacao gentil para corpo e mente"));
+    assertNotEquals("Escolha um exercicio da jornada e pratique por 10 minutos.", result.suggestedNextStep());
+  }
+
+  @Test
+  void fallbackReplyAnswersMeditationRequestWithConcretePractice() {
+    var properties = new AiProperties();
+    properties.setApiKey("");
+    properties.setModel("");
+    var contentClient = Mockito.mock(ContentCatalogClient.class);
+    var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var service =
+        new JourneyChatService(properties, contentClient, emotionalClient, new ObjectMapper());
+
+    when(contentClient.fetchCurrentJourney("Bearer token")).thenReturn(null);
+    when(emotionalClient.fetchRecentContext("Bearer token")).thenReturn(null);
+
+    var result =
+        service.reply(
+            "Bearer token",
+            "Qual a melhor meditacao pra mim agora?",
+            List.of(),
+            null);
+
+    assertTrue(result.fallbackUsed());
+    assertFalse(result.reply().startsWith("Voce trouxe"));
+    assertTrue(result.reply().contains("3 minutos"));
+    assertTrue(result.reply().contains("pontos de contato"));
+    assertTrue(result.suggestedNextStep().contains("respiracao"));
+  }
+
+  @Test
+  void fallbackReplyDoesNotPushJourneyExerciseWhenUserOnlyWantsConversation() {
+    var properties = new AiProperties();
+    properties.setApiKey("");
+    properties.setModel("");
+    var contentClient = Mockito.mock(ContentCatalogClient.class);
+    var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var service =
+        new JourneyChatService(properties, contentClient, emotionalClient, new ObjectMapper());
+
+    when(contentClient.fetchCurrentJourney("Bearer token")).thenReturn(null);
+    when(emotionalClient.fetchRecentContext("Bearer token")).thenReturn(null);
+
+    var result =
+        service.reply(
+            "Bearer token",
+            "Ainda nao iniciei uma jornada, estou apenas batendo um papo mesmo",
+            List.of(),
+            null);
+
+    assertTrue(result.fallbackUsed());
+    assertFalse(result.reply().startsWith("Voce trouxe"));
+    assertTrue(result.reply().contains("Pode ser so conversa"));
+    assertFalse(result.suggestedNextStep().contains("exercicio da jornada"));
+  }
+
+  @Test
+  void fallbackReplyVariesByMessageIntent() {
+    var properties = new AiProperties();
+    properties.setApiKey("");
+    properties.setModel("");
+    var contentClient = Mockito.mock(ContentCatalogClient.class);
+    var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var service =
+        new JourneyChatService(properties, contentClient, emotionalClient, new ObjectMapper());
+
+    when(contentClient.fetchCurrentJourney("Bearer token")).thenReturn(null);
+    when(emotionalClient.fetchRecentContext("Bearer token")).thenReturn(null);
+
+    var sadResult =
+        service.reply(
+            "Bearer token",
+            "Estou triste e com pensamentos intrusivos hoje",
+            List.of(),
+            null);
+    var meditationResult =
+        service.reply(
+            "Bearer token",
+            "Qual a melhor meditacao pra mim agora?",
+            List.of(),
+            null);
+
+    assertNotEquals(sadResult.reply(), meditationResult.reply());
+    assertNotEquals(sadResult.suggestedNextStep(), meditationResult.suggestedNextStep());
+  }
+
+  @Test
+  void externalAiFailureFallsBackToSafeReply() {
+    var properties = new AiProperties();
+    properties.setApiKey("test-key");
+    properties.setModel("test-model");
+    properties.setBaseUrl("http://127.0.0.1:1");
+    properties.setTimeoutSeconds(1);
+    var contentClient = Mockito.mock(ContentCatalogClient.class);
+    var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var service =
+        new JourneyChatService(properties, contentClient, emotionalClient, new ObjectMapper());
+
+    when(contentClient.fetchCurrentJourney("Bearer token")).thenReturn(null);
+    when(emotionalClient.fetchRecentContext("Bearer token")).thenReturn(null);
+
+    var result =
+        service.reply(
+            "Bearer token",
+            "Estou triste e com pensamentos intrusivos hoje",
+            List.of(),
+            null);
+
+    assertTrue(result.fallbackUsed());
+    assertFalse(result.reply().startsWith("Voce trouxe"));
+    assertTrue(result.reply().contains("pensamentos intrusivos"));
   }
 }

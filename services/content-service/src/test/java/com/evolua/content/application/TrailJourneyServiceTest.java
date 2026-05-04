@@ -131,6 +131,9 @@ class TrailJourneyServiceTest {
     }
 
     @Override
+    public void deleteById(Long id) {}
+
+    @Override
     public Page<Trail> findAll(
         String userId, Pageable pageable, String search, String category, Boolean premium) {
       return Page.empty();

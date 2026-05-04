@@ -11,14 +11,19 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 @Component
 public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerator {
+  private static final Logger LOGGER = LoggerFactory.getLogger(OpenAiWellBeingInsightGenerator.class);
+
   private final AiProperties aiProperties;
   private final RuleBasedWellBeingInsightGenerator heuristicGenerator;
   private final CuratedJourneyLinkLibrary linkLibrary;
@@ -62,6 +67,7 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
     }
 
     if (isBlank(aiProperties.getApiKey()) || isBlank(aiProperties.getModel())) {
+      LOGGER.warn("Check-in insight OpenAI unavailable; using fallback. reason=missing_config");
       return markFallbackUsed(baseline);
     }
 
@@ -87,6 +93,7 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
 
       var structured = parseStructuredPayload(payload);
       if (structured.isEmpty()) {
+        logFallback("empty_structured_payload", null);
         return fallbackOrBaseline(baseline);
       }
 
@@ -96,6 +103,7 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
       var trailReason = stringValue(structured.get("suggestedTrailReason"));
 
       if (insight.isBlank() || suggestedAction.isBlank() || trailReason.isBlank()) {
+        logFallback("invalid_structured_payload", null);
         return fallbackOrBaseline(baseline);
       }
 
@@ -115,6 +123,7 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
           generatedTrailDraft,
           false);
     } catch (Exception exception) {
+      logFallback("request_exception", exception);
       return fallbackOrBaseline(baseline);
     }
   }
@@ -462,6 +471,38 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
 
   private CheckInInsight fallbackOrBaseline(CheckInInsight baseline) {
     return Boolean.TRUE.equals(aiProperties.getFallbackEnabled()) ? markFallbackUsed(baseline) : baseline;
+  }
+
+  private void logFallback(String reason, Exception exception) {
+    if (exception instanceof RestClientResponseException responseException) {
+      LOGGER.warn(
+          "Check-in insight OpenAI request failed; using fallback. reason={} status={} response={}",
+          reason,
+          responseException.getStatusCode().value(),
+          safeResponseCode(responseException.getResponseBodyAsString()));
+      return;
+    }
+
+    if (exception == null) {
+      LOGGER.warn("Check-in insight OpenAI response invalid; using fallback. reason={}", reason);
+      return;
+    }
+
+    LOGGER.warn(
+        "Check-in insight OpenAI request failed; using fallback. reason={} exception={}",
+        reason,
+        exception.getClass().getSimpleName());
+  }
+
+  private String safeResponseCode(String responseBody) {
+    var body = safeString(responseBody);
+    var normalized = body.toLowerCase(Locale.ROOT);
+    for (var code : List.of("insufficient_quota", "rate_limit_exceeded", "invalid_api_key", "model_not_found")) {
+      if (normalized.contains(code)) {
+        return code;
+      }
+    }
+    return "unavailable";
   }
 
   private CheckInInsight markFallbackUsed(CheckInInsight baseline) {

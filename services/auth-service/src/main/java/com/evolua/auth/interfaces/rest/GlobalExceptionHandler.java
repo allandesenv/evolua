@@ -15,13 +15,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
   @ExceptionHandler(UserNotFoundException.class)
   public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException exception) {
-    return buildError(HttpStatus.UNAUTHORIZED, exception.getMessage());
+    return buildError(HttpStatus.UNAUTHORIZED, "Credenciais invalidas.");
   }
 
   @ExceptionHandler(InvalidCredentialsException.class)
   public ResponseEntity<ErrorResponse> handleInvalidCredentials(
       InvalidCredentialsException exception) {
-    return buildError(HttpStatus.UNAUTHORIZED, exception.getMessage());
+    return buildError(HttpStatus.UNAUTHORIZED, "Credenciais invalidas.");
   }
 
   @ExceptionHandler(AuthConflictException.class)

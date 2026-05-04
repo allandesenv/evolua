@@ -63,7 +63,7 @@ public class AuthService {
     var user =
         authUserRepository
             .findByEmail(email)
-            .orElseThrow(() -> new UserNotFoundException("Usuario nao existe."));
+            .orElseThrow(() -> new InvalidCredentialsException("Credenciais invalidas."));
 
     if (!passwordEncoder.matches(password, user.passwordHash())) {
       throw new InvalidCredentialsException("Credenciais invalidas.");
