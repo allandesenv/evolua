@@ -13,4 +13,5 @@ public record AuthUser(
     String displayName,
     String avatarUrl,
     List<String> roles,
+    String status,
     Instant createdAt) {}

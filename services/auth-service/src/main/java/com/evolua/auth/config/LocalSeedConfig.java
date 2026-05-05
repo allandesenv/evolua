@@ -51,6 +51,7 @@ public class LocalSeedConfig {
                 existingUser.displayName(),
                 existingUser.avatarUrl(),
                 roles,
+                existingUser.status(),
                 existingUser.createdAt()));
       }
       return;
@@ -67,6 +68,7 @@ public class LocalSeedConfig {
             null,
             null,
             roles,
+            "ACTIVE",
             Instant.now()));
   }
 }

@@ -47,6 +47,7 @@ public class AuthPersistenceAdapter
     entity.setDisplayName(user.displayName());
     entity.setAvatarUrl(user.avatarUrl());
     entity.setRoles(String.join(",", user.roles()));
+    entity.setStatus(user.status());
     entity.setCreatedAt(user.createdAt());
     return map(authUserJpaRepository.save(entity));
   }
@@ -64,6 +65,11 @@ public class AuthPersistenceAdapter
   @Override
   public Optional<AuthUser> findByProviderAndProviderSubject(String provider, String providerSubject) {
     return authUserJpaRepository.findByProviderAndProviderSubject(provider, providerSubject).map(this::map);
+  }
+
+  @Override
+  public void deleteByUserId(String userId) {
+    authUserJpaRepository.deleteByUserId(userId);
   }
 
   @Override
@@ -150,6 +156,7 @@ public class AuthPersistenceAdapter
         saved.getDisplayName(),
         saved.getAvatarUrl(),
         List.of(saved.getRoles().split(",")),
+        saved.getStatus(),
         saved.getCreatedAt());
   }
 

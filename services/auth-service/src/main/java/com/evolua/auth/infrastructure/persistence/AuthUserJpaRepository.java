@@ -9,4 +9,6 @@ public interface AuthUserJpaRepository extends JpaRepository<AuthUserEntity, Lon
   Optional<AuthUserEntity> findByUserId(String userId);
 
   Optional<AuthUserEntity> findByProviderAndProviderSubject(String provider, String providerSubject);
+
+  void deleteByUserId(String userId);
 }

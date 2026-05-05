@@ -61,6 +61,11 @@ public class ProfilePersistenceAdapter implements ProfileRepository {
                 map(saved));
   }
 
+  @Override
+  public void deleteByUserId(String userId) {
+    repository.deleteByUserId(userId);
+  }
+
   private Profile map(ProfileEntity saved) {
     return new Profile(
         saved.getId(),

@@ -35,3 +35,7 @@ app:
   security:
     jwt:
       secret: ${APP_SECURITY_JWT_SECRET:change-this-secret-before-production-change-this-secret}
+  user-service:
+    base-url: ${APP_USER_SERVICE_BASE_URL:http://user-service:8082}
+  account:
+    internal-token: ${APP_ACCOUNT_INTERNAL_TOKEN:change-me-internal-token}

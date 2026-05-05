@@ -1,1 +1,12 @@
-package com.evolua.user; import org.junit.jupiter.api.Test; import org.springframework.boot.test.context.SpringBootTest; @SpringBootTest class UserServiceApplicationTests { @Test void contextLoads() { } }
+package com.evolua.user;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+
+class UserServiceApplicationTests {
+  @Test
+  void applicationClassIsAvailable() {
+    assertThat(UserServiceApplication.class).isNotNull();
+  }
+}
