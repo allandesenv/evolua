@@ -1,6 +1,7 @@
 package com.evolua.ai.application;
 
 import com.evolua.ai.config.AiProperties;
+import com.evolua.ai.infrastructure.security.AuthenticatedUser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
@@ -26,6 +27,7 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
 
   private final AiProperties aiProperties;
   private final RuleBasedWellBeingInsightGenerator heuristicGenerator;
+  private final SubscriptionQuotaClient subscriptionQuotaClient;
   private final CuratedJourneyLinkLibrary linkLibrary;
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
@@ -33,10 +35,12 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
   public OpenAiWellBeingInsightGenerator(
       AiProperties aiProperties,
       RuleBasedWellBeingInsightGenerator heuristicGenerator,
+      SubscriptionQuotaClient subscriptionQuotaClient,
       CuratedJourneyLinkLibrary linkLibrary,
       ObjectMapper objectMapper) {
     this.aiProperties = aiProperties;
     this.heuristicGenerator = heuristicGenerator;
+    this.subscriptionQuotaClient = subscriptionQuotaClient;
     this.linkLibrary = linkLibrary;
     this.objectMapper = objectMapper;
 
@@ -60,8 +64,8 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
       EmotionalContextSnapshot context,
       List<TrailCandidate> candidates,
       List<SpaceCandidate> spaces,
-      List<String> roles) {
-    var baseline = heuristicGenerator.generate(currentCheckIn, context, candidates, spaces, roles);
+      AuthenticatedUser currentUser) {
+    var baseline = heuristicGenerator.generate(currentCheckIn, context, candidates, spaces, currentUser);
     if ("high".equals(baseline.riskLevel())) {
       return baseline;
     }
@@ -69,6 +73,11 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
     if (isBlank(aiProperties.getApiKey()) || isBlank(aiProperties.getModel())) {
       LOGGER.warn("Check-in insight OpenAI unavailable; using fallback. reason=missing_config");
       return markFallbackUsed(baseline);
+    }
+
+    var quota = subscriptionQuotaClient.consume(currentUser.userId());
+    if (!Boolean.TRUE.equals(quota.allowed())) {
+      return markFallbackUsed(baseline).withQuotaMetadata(quota, true);
     }
 
     try {
@@ -87,7 +96,7 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
           restClient
               .post()
               .uri("/responses")
-              .body(buildRequest(currentCheckIn, context, accessibleCandidates, visibleSpaces, roles, baseline))
+              .body(buildRequest(currentCheckIn, context, accessibleCandidates, visibleSpaces, currentUser.roles(), baseline, quota))
               .retrieve()
               .body(Map.class);
 
@@ -121,10 +130,15 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
           suggestedSpace,
           journeyPlan,
           generatedTrailDraft,
-          false);
+          false,
+          false,
+          quota.remainingToday(),
+          quota.rewardedAdAvailable(),
+          quota.upgradeRecommended(),
+          quota.limitMessage());
     } catch (Exception exception) {
       logFallback("request_exception", exception);
-      return fallbackOrBaseline(baseline);
+      return fallbackOrBaseline(baseline).withQuotaMetadata(quota, false);
     }
   }
 
@@ -134,11 +148,16 @@ public class OpenAiWellBeingInsightGenerator implements WellBeingInsightGenerato
       List<TrailCandidate> candidates,
       List<SpaceCandidate> spaces,
       List<String> roles,
-      CheckInInsight baseline) {
+      CheckInInsight baseline,
+      AiQuotaDecision quota) {
     var payload = new LinkedHashMap<String, Object>();
     payload.put("model", aiProperties.getModel());
     payload.put("temperature", aiProperties.getTemperature());
-    payload.put("max_output_tokens", aiProperties.getMaxTokens());
+    payload.put(
+        "max_output_tokens",
+        Boolean.TRUE.equals(quota.premium())
+            ? aiProperties.getMaxTokens()
+            : Math.min(aiProperties.getMaxTokens() == null ? 450 : aiProperties.getMaxTokens(), 450));
     payload.put(
         "input",
         List.of(

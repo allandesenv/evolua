@@ -4,9 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.evolua.ai.config.AiProperties;
+import com.evolua.ai.infrastructure.security.AuthenticatedUser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class OpenAiWellBeingInsightGeneratorTest {
   @Test
@@ -20,6 +22,7 @@ class OpenAiWellBeingInsightGeneratorTest {
         new OpenAiWellBeingInsightGenerator(
             properties,
             new RuleBasedWellBeingInsightGenerator(new CuratedJourneyLinkLibrary()),
+            Mockito.mock(SubscriptionQuotaClient.class),
             new CuratedJourneyLinkLibrary(),
             new ObjectMapper());
 
@@ -30,7 +33,7 @@ class OpenAiWellBeingInsightGeneratorTest {
             new EmotionalContextSnapshot(List.of(), 7, "produtivo", "estavel"),
             List.of(),
             List.of(),
-            List.of("ROLE_USER"));
+            new AuthenticatedUser("user-123", "user@evolua.app", List.of("ROLE_USER")));
 
     assertEquals(Boolean.TRUE, result.fallbackUsed());
     assertTrue(result.insight().contains("momento de avanco"));

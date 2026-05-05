@@ -30,3 +30,6 @@ app:
     temperature: ${APP_AI_TEMPERATURE:0.3}
     timeout-seconds: ${APP_AI_TIMEOUT_SECONDS:15}
     fallback-enabled: ${APP_AI_FALLBACK_ENABLED:true}
+  subscription:
+    base-url: ${APP_SUBSCRIPTION_BASE_URL:http://subscription-service:8087}
+    internal-token: ${APP_BILLING_INTERNAL_TOKEN:change-me-internal-token}

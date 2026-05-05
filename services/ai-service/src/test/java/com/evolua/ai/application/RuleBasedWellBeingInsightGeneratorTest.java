@@ -5,12 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.evolua.ai.infrastructure.security.AuthenticatedUser;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class RuleBasedWellBeingInsightGeneratorTest {
   private final RuleBasedWellBeingInsightGenerator generator =
       new RuleBasedWellBeingInsightGenerator(new CuratedJourneyLinkLibrary());
+  private static final AuthenticatedUser USER =
+      new AuthenticatedUser("user-123", "user@evolua.app", List.of("ROLE_USER"));
 
   @Test
   void generatedTrailDraftContentInterpolatesRealValues() {
@@ -20,7 +23,7 @@ class RuleBasedWellBeingInsightGeneratorTest {
             new EmotionalContextSnapshot(List.of(), 5, "ansioso", "mais fragil"),
             List.of(),
             List.of(),
-            List.of("ROLE_USER"));
+            USER);
 
     assertNotNull(result.generatedTrailDraft());
     assertTrue(result.generatedTrailDraft().content().contains("# Voltar ao eixo em dias de ansiedade"));
@@ -41,7 +44,7 @@ class RuleBasedWellBeingInsightGeneratorTest {
             new EmotionalContextSnapshot(List.of(), 4, "ansioso", "mais fragil"),
             List.of(),
             List.of(),
-            List.of("ROLE_USER"));
+            USER);
 
     assertEquals("low", result.riskLevel());
     assertTrue(result.insight().contains("momento de avanco"));
@@ -62,7 +65,7 @@ class RuleBasedWellBeingInsightGeneratorTest {
             new EmotionalContextSnapshot(List.of(), 6, "calmo", "estavel"),
             List.of(),
             List.of(),
-            List.of("ROLE_USER"));
+            USER);
 
     assertEquals("medium", result.riskLevel());
     assertTrue(result.insight().contains("tensao relevante"));
@@ -81,7 +84,7 @@ class RuleBasedWellBeingInsightGeneratorTest {
             new EmotionalContextSnapshot(List.of(), 7, "produtivo", "estavel"),
             List.of(),
             List.of(),
-            List.of("ROLE_USER"));
+            USER);
 
     assertEquals("low", result.riskLevel());
     assertTrue(result.insight().contains("desgaste"));
@@ -98,7 +101,7 @@ class RuleBasedWellBeingInsightGeneratorTest {
             new EmotionalContextSnapshot(List.of(), 7, "calmo", "estavel"),
             List.of(),
             List.of(),
-            List.of("ROLE_USER"));
+            USER);
 
     assertEquals("low", result.riskLevel());
     assertTrue(result.insight().contains("base favoravel"));
@@ -115,7 +118,7 @@ class RuleBasedWellBeingInsightGeneratorTest {
             new EmotionalContextSnapshot(List.of(), 4, "triste", "mais fragil"),
             List.of(),
             List.of(),
-            List.of("ROLE_USER"));
+            USER);
 
     assertEquals("high", result.riskLevel());
     assertTrue(result.insight().contains("apoio humano"));

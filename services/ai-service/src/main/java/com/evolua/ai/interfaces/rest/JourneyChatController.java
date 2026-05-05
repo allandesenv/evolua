@@ -3,6 +3,7 @@ package com.evolua.ai.interfaces.rest;
 import com.evolua.ai.application.JourneyChatMessage;
 import com.evolua.ai.application.JourneyChatResponse;
 import com.evolua.ai.application.JourneyChatService;
+import com.evolua.ai.infrastructure.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -20,9 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/v1/ai")
 public class JourneyChatController {
   private final JourneyChatService journeyChatService;
+  private final CurrentUserProvider currentUserProvider;
 
-  public JourneyChatController(JourneyChatService journeyChatService) {
+  public JourneyChatController(JourneyChatService journeyChatService, CurrentUserProvider currentUserProvider) {
     this.journeyChatService = journeyChatService;
+    this.currentUserProvider = currentUserProvider;
   }
 
   @PostMapping("/journey-chat")
@@ -33,6 +36,7 @@ public class JourneyChatController {
     return ResponseEntity.ok(
         journeyChatService.reply(
             authorizationHeader,
+            currentUserProvider.getCurrentUser(),
             request.message(),
             request.conversationHistory() == null ? List.of() : request.conversationHistory(),
             request.trailId()));

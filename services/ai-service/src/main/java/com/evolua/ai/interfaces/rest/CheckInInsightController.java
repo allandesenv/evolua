@@ -61,7 +61,12 @@ public class CheckInInsightController {
       SuggestedSpaceResponse suggestedSpace,
       JourneyPlanResponse journeyPlan,
       GeneratedTrailDraftResponse generatedTrailDraft,
-      Boolean fallbackUsed) {
+      Boolean fallbackUsed,
+      Boolean quotaLimited,
+      Integer quotaRemainingToday,
+      Boolean rewardedAdAvailable,
+      Boolean upgradeRecommended,
+      String limitMessage) {
     static CheckInInsightResponse from(CheckInInsight insight) {
       return new CheckInInsightResponse(
           insight.insight(),
@@ -73,7 +78,12 @@ public class CheckInInsightController {
           SuggestedSpaceResponse.from(insight.suggestedSpace()),
           JourneyPlanResponse.from(insight.journeyPlan()),
           GeneratedTrailDraftResponse.from(insight.generatedTrailDraft()),
-          insight.fallbackUsed());
+          insight.fallbackUsed(),
+          insight.quotaLimited(),
+          insight.quotaRemainingToday(),
+          insight.rewardedAdAvailable(),
+          insight.upgradeRecommended(),
+          insight.limitMessage());
     }
   }
 

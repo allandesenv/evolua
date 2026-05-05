@@ -3,6 +3,9 @@ package com.evolua.subscription.interfaces.rest;
 import com.evolua.subscription.application.PlanCatalogService;
 import com.evolua.subscription.application.SubscriptionService;
 import com.evolua.subscription.config.BillingProperties;
+import com.evolua.subscription.domain.AdRewardSession;
+import com.evolua.subscription.domain.AiQuotaConsumeResult;
+import com.evolua.subscription.domain.AiQuotaStatus;
 import com.evolua.subscription.infrastructure.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -60,9 +63,12 @@ public class SubscriptionController {
   @GetMapping("/subscription/current")
   @Operation(summary = "Current subscription")
   public ResponseEntity<ApiResponse<CurrentSubscriptionResponse>> current() {
+    var userId = currentUserId();
     return ResponseEntity.ok(
         ApiResponse.success(
-            200, "Current subscription", mapper.toCurrentResponse(service.current(currentUserId()))));
+            200,
+            "Current subscription",
+            mapper.toCurrentResponse(service.current(userId), service.quotaStatus(userId, "AI_ACTION"))));
   }
 
   @GetMapping("/subscriptions")
@@ -144,6 +150,72 @@ public class SubscriptionController {
         ApiResponse.success(200, "Access summary", mapper.toAccessResponse(service.accessSummary(userId))));
   }
 
+  @PostMapping("/internal/ai-quota/consume")
+  @Operation(summary = "Consume AI quota for an internal caller")
+  public ResponseEntity<ApiResponse<AiQuotaConsumeResponse>> consumeAiQuota(
+      @RequestHeader(name = "X-Internal-Token", required = false) String token,
+      @Valid @RequestBody AiQuotaConsumeRequest request) {
+    validateInternalToken(token);
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            200,
+            "AI quota consumed",
+            AiQuotaConsumeResponse.from(service.consumeAiQuota(request.userId(), request.resource()))));
+  }
+
+  @GetMapping("/internal/ai-quota/status")
+  @Operation(summary = "AI quota status for an internal caller")
+  public ResponseEntity<ApiResponse<AiQuotaStatusResponse>> aiQuotaStatus(
+      @RequestParam String userId,
+      @RequestParam(defaultValue = "AI_ACTION") String resource,
+      @RequestHeader(name = "X-Internal-Token", required = false) String token) {
+    validateInternalToken(token);
+    return ResponseEntity.ok(
+        ApiResponse.success(200, "AI quota status", AiQuotaStatusResponse.from(service.quotaStatus(userId, resource))));
+  }
+
+  @PostMapping("/internal/ad-rewards/session")
+  @Operation(summary = "Create rewarded ad session for an internal caller")
+  public ResponseEntity<ApiResponse<AdRewardSessionResponse>> createInternalAdRewardSession(
+      @RequestHeader(name = "X-Internal-Token", required = false) String token,
+      @Valid @RequestBody AdRewardSessionRequest request) {
+    validateInternalToken(token);
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(
+            ApiResponse.success(
+                201,
+                "Reward session created",
+                AdRewardSessionResponse.from(service.createRewardSession(request.userId(), request.rewardType()))));
+  }
+
+  @PostMapping("/ads/reward-session")
+  @Operation(summary = "Create rewarded ad session for the authenticated user")
+  public ResponseEntity<ApiResponse<AdRewardSessionResponse>> createAdRewardSession(
+      @Valid @RequestBody PublicAdRewardSessionRequest request) {
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(
+            ApiResponse.success(
+                201,
+                "Reward session created",
+                AdRewardSessionResponse.from(
+                    service.createRewardSession(currentUserId(), request.rewardType()))));
+  }
+
+  @GetMapping("/public/ads/admob/reward-callback")
+  @Operation(summary = "AdMob rewarded ad server-side verification callback")
+  public ResponseEntity<ApiResponse<AdRewardSessionResponse>> adMobRewardCallback(
+      @RequestParam(name = "custom_data", required = false) String customData,
+      @RequestParam(name = "transaction_id", required = false) String transactionId) {
+    if (customData == null || customData.isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing reward session custom_data");
+    }
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            200,
+            "Reward granted",
+            AdRewardSessionResponse.from(service.grantAdMobReward(customData.trim(), transactionId))));
+  }
+
   @PostMapping("/public/billing/mercadopago/webhook")
   @Operation(summary = "Mercado Pago webhook")
   public ResponseEntity<ApiResponse<BillingCheckoutResponse>> mercadoPagoWebhook(
@@ -176,6 +248,73 @@ public class SubscriptionController {
     }
     if (!signature.equals(expected) && !signature.contains(expected)) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid webhook signature");
+    }
+  }
+
+  public record AiQuotaConsumeRequest(
+      @jakarta.validation.constraints.NotBlank String userId,
+      @jakarta.validation.constraints.NotBlank String resource) {}
+
+  public record AiQuotaConsumeResponse(Boolean allowed, String consumptionType, AiQuotaStatusResponse status) {
+    static AiQuotaConsumeResponse from(AiQuotaConsumeResult result) {
+      return new AiQuotaConsumeResponse(result.allowed(), result.consumptionType(), AiQuotaStatusResponse.from(result.status()));
+    }
+  }
+
+  public record AiQuotaStatusResponse(
+      String userId,
+      String resource,
+      Boolean premium,
+      String planCode,
+      Integer dailyLimit,
+      Integer usedToday,
+      Integer remainingToday,
+      Integer rewardedCreditsGrantedToday,
+      Integer rewardedCreditsUsedToday,
+      Boolean rewardedAdAvailable,
+      Boolean upgradeRecommended,
+      String limitMessage) {
+    static AiQuotaStatusResponse from(AiQuotaStatus status) {
+      return new AiQuotaStatusResponse(
+          status.userId(),
+          status.resource(),
+          status.premium(),
+          status.planCode(),
+          status.dailyLimit(),
+          status.usedToday(),
+          status.remainingToday(),
+          status.rewardedCreditsGrantedToday(),
+          status.rewardedCreditsUsedToday(),
+          status.rewardedAdAvailable(),
+          status.upgradeRecommended(),
+          status.limitMessage());
+    }
+  }
+
+  public record AdRewardSessionRequest(
+      @jakarta.validation.constraints.NotBlank String userId,
+      @jakarta.validation.constraints.NotBlank String rewardType) {}
+
+  public record PublicAdRewardSessionRequest(
+      @jakarta.validation.constraints.NotBlank String rewardType) {}
+
+  public record AdRewardSessionResponse(
+      String id,
+      String provider,
+      String rewardType,
+      String status,
+      String customData,
+      java.time.Instant expiresAt,
+      java.time.Instant grantedAt) {
+    static AdRewardSessionResponse from(AdRewardSession session) {
+      return new AdRewardSessionResponse(
+          session.publicId(),
+          session.provider(),
+          session.rewardType(),
+          session.status(),
+          session.publicId(),
+          session.expiresAt(),
+          session.grantedAt());
     }
   }
 }

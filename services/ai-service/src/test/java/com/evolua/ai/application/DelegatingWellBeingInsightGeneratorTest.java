@@ -5,11 +5,15 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.evolua.ai.config.AiProperties;
+import com.evolua.ai.infrastructure.security.AuthenticatedUser;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class DelegatingWellBeingInsightGeneratorTest {
+  private static final AuthenticatedUser USER =
+      new AuthenticatedUser("user-123", "user@evolua.app", List.of("ROLE_USER"));
+
   @Test
   void usesOpenAiGeneratorWhenProviderIsOpenAi() {
     var properties = new AiProperties();
@@ -19,7 +23,7 @@ class DelegatingWellBeingInsightGeneratorTest {
     var delegating = new DelegatingWellBeingInsightGenerator(properties, heuristic, openAi);
     var expected = new CheckInInsight("insight", "action", "low", 1L, "Trilha", "reason", null, null, null, false);
 
-    when(openAi.generate(Mockito.any(), Mockito.any(), Mockito.anyList(), Mockito.anyList(), Mockito.anyList()))
+    when(openAi.generate(Mockito.any(), Mockito.any(), Mockito.anyList(), Mockito.anyList(), Mockito.any()))
         .thenReturn(expected);
 
     var result =
@@ -28,7 +32,7 @@ class DelegatingWellBeingInsightGeneratorTest {
             new EmotionalContextSnapshot(List.of(), 7, "calmo", "estavel"),
             List.of(),
             List.of(),
-            List.of("ROLE_USER"));
+            USER);
 
     assertSame(expected, result);
     verifyNoInteractions(heuristic);
@@ -43,7 +47,7 @@ class DelegatingWellBeingInsightGeneratorTest {
     var delegating = new DelegatingWellBeingInsightGenerator(properties, heuristic, openAi);
     var expected = new CheckInInsight("insight", "action", "low", null, null, "reason", null, null, null, false);
 
-    when(heuristic.generate(Mockito.any(), Mockito.any(), Mockito.anyList(), Mockito.anyList(), Mockito.anyList()))
+    when(heuristic.generate(Mockito.any(), Mockito.any(), Mockito.anyList(), Mockito.anyList(), Mockito.any()))
         .thenReturn(expected);
 
     var result =
@@ -52,7 +56,7 @@ class DelegatingWellBeingInsightGeneratorTest {
             new EmotionalContextSnapshot(List.of(), 7, "calmo", "estavel"),
             List.of(),
             List.of(),
-            List.of("ROLE_USER"));
+            USER);
 
     assertSame(expected, result);
     verifyNoInteractions(openAi);

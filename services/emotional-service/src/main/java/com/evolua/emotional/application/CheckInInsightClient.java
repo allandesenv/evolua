@@ -57,7 +57,12 @@ public class CheckInInsightClient {
           suggestedSpace(response.get("suggestedSpace")),
           journeyPlan(response.get("journeyPlan")),
           generatedTrailDraft(response.get("generatedTrailDraft")),
-          booleanValue(response.get("fallbackUsed")));
+          booleanValue(response.get("fallbackUsed")),
+          booleanValue(response.get("quotaLimited")),
+          intValue(response.get("quotaRemainingToday")),
+          booleanValue(response.get("rewardedAdAvailable")),
+          booleanValue(response.get("upgradeRecommended")),
+          nullableStringValue(response.get("limitMessage")));
     } catch (Exception exception) {
       return fallback(checkIn);
     }
@@ -145,5 +150,13 @@ public class CheckInInsightClient {
 
   private Boolean booleanValue(Object value) {
     return value instanceof Boolean bool ? bool : Boolean.FALSE;
+  }
+
+  private Integer intValue(Object value) {
+    return value instanceof Number number ? number.intValue() : null;
+  }
+
+  private String nullableStringValue(Object value) {
+    return value == null ? null : value.toString();
   }
 }
