@@ -2,10 +2,12 @@ package com.evolua.user.interfaces.rest;
 
 import com.evolua.user.application.ProfileService;
 import com.evolua.user.application.AvatarStorageService;
+import com.evolua.user.application.PrivacySettingsService;
 import com.evolua.user.infrastructure.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
@@ -23,16 +25,19 @@ public class ProfileController {
 
   private final ProfileService service;
   private final AvatarStorageService avatarStorageService;
+  private final PrivacySettingsService privacySettingsService;
   private final ProfileMapper mapper;
   private final CurrentUserProvider currentUserProvider;
 
   public ProfileController(
       ProfileService service,
       AvatarStorageService avatarStorageService,
+      PrivacySettingsService privacySettingsService,
       ProfileMapper mapper,
       CurrentUserProvider currentUserProvider) {
     this.service = service;
     this.avatarStorageService = avatarStorageService;
+    this.privacySettingsService = privacySettingsService;
     this.mapper = mapper;
     this.currentUserProvider = currentUserProvider;
   }
@@ -132,6 +137,45 @@ public class ProfileController {
                 query.effectiveSortBy(ALLOWED_SORT_FIELDS, DEFAULT_SORT_BY),
                 query.normalizedSortDir(),
                 filters)));
+  }
+
+  @GetMapping("/me/privacy-settings")
+  @Operation(summary = "Current profile privacy settings")
+  public ResponseEntity<ApiResponse<PrivacySettingsResponse>> privacySettings() {
+    var settings = privacySettingsService.get(currentUserProvider.getCurrentUser().userId());
+    return ResponseEntity.ok(
+        ApiResponse.success(200, "Privacy settings", PrivacySettingsResponse.from(settings)));
+  }
+
+  @PutMapping("/me/privacy-settings")
+  @Operation(summary = "Create or update current profile privacy settings")
+  public ResponseEntity<ApiResponse<PrivacySettingsResponse>> savePrivacySettings(
+      @RequestBody PrivacySettingsRequest request) {
+    var settings =
+        privacySettingsService.save(
+            currentUserProvider.getCurrentUser().userId(),
+            request.privateJournal(),
+            request.hideSocialCheckIns(),
+            request.allowHistoryInsights(),
+            request.useEmotionalDataForAi(),
+            request.dailyReminders(),
+            request.contentPreferences(),
+            request.aiTone(),
+            request.suggestionFrequency(),
+            request.trailStyle());
+    return ResponseEntity.ok(
+        ApiResponse.success(200, "Privacy settings saved", PrivacySettingsResponse.from(settings)));
+  }
+
+  @GetMapping("/me/data-export")
+  @Operation(summary = "Export current profile data")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> dataExport() {
+    var currentUser = currentUserProvider.getCurrentUser();
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            200,
+            "Data export",
+            privacySettingsService.dataExport(currentUser.userId(), currentUser.email())));
   }
 
   public record AvatarUploadResponse(String avatarUrl, String fileName) {}

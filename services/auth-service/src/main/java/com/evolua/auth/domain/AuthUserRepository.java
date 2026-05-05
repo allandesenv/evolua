@@ -10,4 +10,6 @@ public interface AuthUserRepository {
   Optional<AuthUser> findByUserId(String userId);
 
   Optional<AuthUser> findByProviderAndProviderSubject(String provider, String providerSubject);
+
+  void deleteByUserId(String userId);
 }

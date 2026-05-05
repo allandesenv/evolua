@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 public interface ProfileJpaRepository
     extends JpaRepository<ProfileEntity, Long>, JpaSpecificationExecutor<ProfileEntity> {
   java.util.Optional<ProfileEntity> findByUserId(String userId);
+
+  void deleteByUserId(String userId);
 }

@@ -10,4 +10,6 @@ public interface ProfileRepository {
   Optional<Profile> findByUserId(String userId);
 
   Page<Profile> findAllByUserId(String userId, Pageable pageable, String search, Boolean premium);
+
+  void deleteByUserId(String userId);
 }

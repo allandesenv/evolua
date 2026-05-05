@@ -70,6 +70,28 @@ public class AvatarStorageService {
     }
   }
 
+  public void deleteForUser(String userId) {
+    try {
+      if (!Files.exists(rootPath)) {
+        return;
+      }
+      try (var stream = Files.list(rootPath)) {
+        stream
+            .filter(path -> path.getFileName().toString().startsWith(userId + "-"))
+            .forEach(
+                path -> {
+                  try {
+                    Files.deleteIfExists(path);
+                  } catch (IOException ignored) {
+                    // Best-effort cleanup of local avatar files.
+                  }
+                });
+      }
+    } catch (IOException ignored) {
+      // Best-effort cleanup of local avatar files.
+    }
+  }
+
   private String extractExtension(String originalFileName) {
     if (originalFileName == null || !originalFileName.contains(".")) {
       throw new IllegalArgumentException("Avatar extension is required");
