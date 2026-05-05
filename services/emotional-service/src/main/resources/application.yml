@@ -24,9 +24,6 @@ springdoc:
 app:
   ai:
     base-url: ${APP_AI_BASE_URL:http://ai-service:8089}
-    checkin-enabled: ${AI_CHECKIN_ENABLED:${APP_AI_CHECKIN_ENABLED:false}}
-    chat-enabled: ${AI_CHAT_ENABLED:${APP_AI_CHAT_ENABLED:true}}
-    history-analysis-enabled: ${AI_HISTORY_ANALYSIS_ENABLED:${APP_AI_HISTORY_ANALYSIS_ENABLED:true}}
   content:
     base-url: ${APP_CONTENT_BASE_URL:http://content-service:8083}
   subscription:

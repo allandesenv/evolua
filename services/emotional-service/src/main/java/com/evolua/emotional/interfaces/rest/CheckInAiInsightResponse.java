@@ -1,7 +1,5 @@
 package com.evolua.emotional.interfaces.rest;
 
-import java.util.List;
-
 public record CheckInAiInsightResponse(
     String insight,
     String suggestedAction,
@@ -17,13 +15,4 @@ public record CheckInAiInsightResponse(
     Integer quotaRemainingToday,
     Boolean rewardedAdAvailable,
     Boolean upgradeRecommended,
-    String limitMessage,
-    String emotionalStateLabel,
-    String shortInsight,
-    String nextStep,
-    String severityLevel,
-    List<String> tags,
-    Boolean shouldSuggestAIChat,
-    Boolean shouldSuggestHistoryAnalysis,
-    CheckInSuggestedTrailResponse suggestedTrailDetail,
-    CheckInSuggestedActionResponse suggestedActionDetail) {}
+    String limitMessage) {}

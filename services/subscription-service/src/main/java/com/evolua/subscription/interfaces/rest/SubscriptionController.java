@@ -1,6 +1,7 @@
 package com.evolua.subscription.interfaces.rest;
 
 import com.evolua.subscription.application.PlanCatalogService;
+import com.evolua.subscription.application.AdMobSsvVerifier;
 import com.evolua.subscription.application.SubscriptionService;
 import com.evolua.subscription.config.BillingProperties;
 import com.evolua.subscription.domain.AdRewardSession;
@@ -12,6 +13,7 @@ import jakarta.validation.Valid;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,18 +38,21 @@ public class SubscriptionController {
   private final SubscriptionMapper mapper;
   private final CurrentUserProvider currentUserProvider;
   private final BillingProperties billingProperties;
+  private final AdMobSsvVerifier adMobSsvVerifier;
 
   public SubscriptionController(
       SubscriptionService service,
       PlanCatalogService planCatalogService,
       SubscriptionMapper mapper,
       CurrentUserProvider currentUserProvider,
-      BillingProperties billingProperties) {
+      BillingProperties billingProperties,
+      AdMobSsvVerifier adMobSsvVerifier) {
     this.service = service;
     this.planCatalogService = planCatalogService;
     this.mapper = mapper;
     this.currentUserProvider = currentUserProvider;
     this.billingProperties = billingProperties;
+    this.adMobSsvVerifier = adMobSsvVerifier;
   }
 
   @GetMapping("/plans")
@@ -204,10 +209,16 @@ public class SubscriptionController {
   @GetMapping("/public/ads/admob/reward-callback")
   @Operation(summary = "AdMob rewarded ad server-side verification callback")
   public ResponseEntity<ApiResponse<AdRewardSessionResponse>> adMobRewardCallback(
+      HttpServletRequest request,
       @RequestParam(name = "custom_data", required = false) String customData,
       @RequestParam(name = "transaction_id", required = false) String transactionId) {
     if (customData == null || customData.isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing reward session custom_data");
+    }
+    try {
+      adMobSsvVerifier.verify(request.getQueryString());
+    } catch (IllegalArgumentException exception) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, exception.getMessage(), exception);
     }
     return ResponseEntity.ok(
         ApiResponse.success(

@@ -9,6 +9,7 @@ public class BillingProperties {
   private String publicBaseUrl = "http://localhost:8087";
   private String internalToken = "change-me-internal-token";
   private MercadoPago mercadoPago = new MercadoPago();
+  private AdMob admob = new AdMob();
 
   public String getProvider() { return provider; }
   public void setProvider(String provider) { this.provider = provider; }
@@ -20,6 +21,8 @@ public class BillingProperties {
   public void setInternalToken(String internalToken) { this.internalToken = internalToken; }
   public MercadoPago getMercadoPago() { return mercadoPago; }
   public void setMercadoPago(MercadoPago mercadoPago) { this.mercadoPago = mercadoPago; }
+  public AdMob getAdmob() { return admob; }
+  public void setAdmob(AdMob admob) { this.admob = admob; }
 
   public static class MercadoPago {
     private String baseUrl = "https://api.mercadopago.com";
@@ -32,5 +35,17 @@ public class BillingProperties {
     public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
     public String getWebhookSecret() { return webhookSecret; }
     public void setWebhookSecret(String webhookSecret) { this.webhookSecret = webhookSecret; }
+  }
+
+  public static class AdMob {
+    private String verifierKeysUrl = "https://www.gstatic.com/admob/reward/verifier-keys.json";
+    private boolean ssvVerificationEnabled = true;
+
+    public String getVerifierKeysUrl() { return verifierKeysUrl; }
+    public void setVerifierKeysUrl(String verifierKeysUrl) { this.verifierKeysUrl = verifierKeysUrl; }
+    public boolean isSsvVerificationEnabled() { return ssvVerificationEnabled; }
+    public void setSsvVerificationEnabled(boolean ssvVerificationEnabled) {
+      this.ssvVerificationEnabled = ssvVerificationEnabled;
+    }
   }
 }

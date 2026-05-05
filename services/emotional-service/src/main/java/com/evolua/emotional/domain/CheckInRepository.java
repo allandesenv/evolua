@@ -1,7 +1,6 @@
 package com.evolua.emotional.domain;
 
 import java.time.Instant;
-import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -17,6 +16,4 @@ public interface CheckInRepository {
       Integer energyMax,
       Instant from,
       Instant to);
-
-  List<CheckIn> findRecentByUserId(String userId, Instant from);
 }

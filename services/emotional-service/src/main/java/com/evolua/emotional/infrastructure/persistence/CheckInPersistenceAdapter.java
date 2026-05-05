@@ -3,7 +3,6 @@ package com.evolua.emotional.infrastructure.persistence;
 import com.evolua.emotional.domain.CheckIn;
 import com.evolua.emotional.domain.CheckInRepository;
 import java.time.Instant;
-import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -26,14 +25,15 @@ public class CheckInPersistenceAdapter implements CheckInRepository {
     entity.setEnergyLevel(item.energyLevel());
     entity.setRecommendedPractice(item.recommendedPractice());
     entity.setCreatedAt(item.createdAt());
-    entity.setEmotion(item.emotion());
-    entity.setIntensity(item.intensity());
-    entity.setEnergy(item.energy());
-    entity.setContext(item.context());
-    entity.setDecisionTags(item.decisionTags());
-    entity.setSeverityLevel(item.severityLevel());
     CheckInEntity saved = repository.save(entity);
-    return toDomain(saved);
+    return new CheckIn(
+        saved.getId(),
+        saved.getUserId(),
+        saved.getMood(),
+        saved.getReflection(),
+        saved.getEnergyLevel(),
+        saved.getRecommendedPractice(),
+        saved.getCreatedAt());
   }
 
   public Page<CheckIn> findAllByUserId(
@@ -87,31 +87,14 @@ public class CheckInPersistenceAdapter implements CheckInRepository {
 
     return repository.findAll(specification, pageable)
         .map(
-            this::toDomain);
-  }
-
-  public List<CheckIn> findRecentByUserId(String userId, Instant from) {
-    return repository
-        .findTop30ByUserIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(userId, from)
-        .stream()
-        .map(this::toDomain)
-        .toList();
-  }
-
-  private CheckIn toDomain(CheckInEntity saved) {
-    return new CheckIn(
-        saved.getId(),
-        saved.getUserId(),
-        saved.getMood(),
-        saved.getReflection(),
-        saved.getEnergyLevel(),
-        saved.getRecommendedPractice(),
-        saved.getCreatedAt(),
-        saved.getEmotion(),
-        saved.getIntensity(),
-        saved.getEnergy(),
-        saved.getContext(),
-        saved.getDecisionTags(),
-        saved.getSeverityLevel());
+            saved ->
+                new CheckIn(
+                    saved.getId(),
+                    saved.getUserId(),
+                    saved.getMood(),
+                    saved.getReflection(),
+                    saved.getEnergyLevel(),
+                    saved.getRecommendedPractice(),
+                    saved.getCreatedAt()));
   }
 }
