@@ -99,7 +99,8 @@ public class JourneyChatService {
                       conversationHistory,
                       currentJourney,
                       emotionalContext,
-                      trailId))
+                      trailId,
+                      quota))
               .retrieve()
               .body(Map.class);
 
@@ -124,11 +125,16 @@ public class JourneyChatService {
       List<JourneyChatMessage> conversationHistory,
       JourneyTrailSnapshot currentJourney,
       EmotionalContextSnapshot emotionalContext,
-      Long trailId) {
+      Long trailId,
+      AiQuotaDecision quota) {
     var payload = new LinkedHashMap<String, Object>();
     payload.put("model", aiProperties.getModel());
     payload.put("temperature", aiProperties.getTemperature());
-    payload.put("max_output_tokens", Math.min(aiProperties.getMaxTokens() == null ? 700 : aiProperties.getMaxTokens(), 900));
+    payload.put(
+        "max_output_tokens",
+        Boolean.TRUE.equals(quota.premium())
+            ? Math.min(aiProperties.getMaxTokens() == null ? 900 : aiProperties.getMaxTokens(), 900)
+            : Math.min(aiProperties.getMaxTokens() == null ? 450 : aiProperties.getMaxTokens(), 450));
     payload.put(
         "input",
         List.of(

@@ -18,12 +18,6 @@ public interface CheckInMapper {
         item.reflection(),
         item.energyLevel(),
         item.recommendedPractice(),
-        item.emotion(),
-        item.intensity(),
-        item.energy(),
-        item.context(),
-        item.decisionTags(),
-        item.severityLevel(),
         aiInsight == null
             ? null
             : new CheckInAiInsightResponse(
@@ -68,25 +62,7 @@ public interface CheckInMapper {
                 aiInsight.quotaRemainingToday(),
                 aiInsight.rewardedAdAvailable(),
                 aiInsight.upgradeRecommended(),
-                aiInsight.limitMessage(),
-                aiInsight.emotionalStateLabel(),
-                aiInsight.shortInsight(),
-                aiInsight.nextStep(),
-                aiInsight.severityLevel(),
-                aiInsight.tags(),
-                aiInsight.shouldSuggestAIChat(),
-                aiInsight.shouldSuggestHistoryAnalysis(),
-                aiInsight.suggestedTrailDetail() == null
-                    ? null
-                    : new CheckInSuggestedTrailResponse(
-                        aiInsight.suggestedTrailDetail().id(),
-                        aiInsight.suggestedTrailDetail().title()),
-                aiInsight.suggestedActionDetail() == null
-                    ? null
-                    : new CheckInSuggestedActionResponse(
-                        aiInsight.suggestedActionDetail().type(),
-                        aiInsight.suggestedActionDetail().title(),
-                        aiInsight.suggestedActionDetail().durationMinutes())),
+                aiInsight.limitMessage()),
         item.createdAt());
   }
 }

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.evolua.ai.config.AiProperties;
@@ -271,5 +272,65 @@ class JourneyChatServiceTest {
     assertTrue(result.fallbackUsed());
     assertFalse(result.reply().startsWith("Voce trouxe"));
     assertTrue(result.reply().contains("pensamentos intrusivos"));
+  }
+
+  @Test
+  void highRiskReplyDoesNotConsumeQuota() {
+    var properties = new AiProperties();
+    properties.setApiKey("test-key");
+    properties.setModel("test-model");
+    var contentClient = Mockito.mock(ContentCatalogClient.class);
+    var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var quotaClient = Mockito.mock(SubscriptionQuotaClient.class);
+    var service =
+        new JourneyChatService(properties, contentClient, emotionalClient, quotaClient, new ObjectMapper());
+
+    var result =
+        service.reply(
+            "Bearer token",
+            USER,
+            "Estou sem saida e penso em me machucar.",
+            List.of(),
+            null);
+
+    assertEquals("high", result.riskLevel());
+    verifyNoInteractions(quotaClient, contentClient, emotionalClient);
+  }
+
+  @Test
+  void exhaustedQuotaReturnsFallbackWithLimitMetadata() {
+    var properties = new AiProperties();
+    properties.setApiKey("test-key");
+    properties.setModel("test-model");
+    properties.setBaseUrl("http://127.0.0.1:1");
+    var contentClient = Mockito.mock(ContentCatalogClient.class);
+    var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var quotaClient = Mockito.mock(SubscriptionQuotaClient.class);
+    when(contentClient.fetchCurrentJourney("Bearer token")).thenReturn(null);
+    when(emotionalClient.fetchRecentContext("Bearer token")).thenReturn(null);
+    when(quotaClient.consume("user-123"))
+        .thenReturn(
+            new AiQuotaDecision(
+                false,
+                false,
+                0,
+                true,
+                true,
+                "Seu limite gratuito de IA acabou por hoje."));
+    var service =
+        new JourneyChatService(properties, contentClient, emotionalClient, quotaClient, new ObjectMapper());
+
+    var result =
+        service.reply(
+            "Bearer token",
+            USER,
+            "Quero conversar sobre meu dia.",
+            List.of(),
+            null);
+
+    assertTrue(result.fallbackUsed());
+    assertEquals(Boolean.TRUE, result.quotaLimited());
+    assertEquals(Boolean.TRUE, result.rewardedAdAvailable());
+    assertTrue(result.limitMessage().contains("limite gratuito"));
   }
 }

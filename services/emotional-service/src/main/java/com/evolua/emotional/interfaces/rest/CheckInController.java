@@ -48,12 +48,7 @@ public class CheckInController {
             currentUserProvider.getCurrentUser().userId(),
             request.mood(),
             request.reflection(),
-            request.energyLevel(),
-            request.emotion(),
-            request.intensity(),
-            request.energy(),
-            request.context(),
-            request.note());
+            request.energyLevel());
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(ApiResponse.success(201, "Created", mapper.toResponse(created.checkIn(), created.aiInsight())));
   }

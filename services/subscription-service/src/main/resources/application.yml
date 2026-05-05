@@ -36,3 +36,6 @@ app:
       base-url: ${MERCADO_PAGO_BASE_URL:https://api.mercadopago.com}
       access-token: ${MERCADO_PAGO_ACCESS_TOKEN:}
       webhook-secret: ${MERCADO_PAGO_WEBHOOK_SECRET:}
+    admob:
+      verifier-keys-url: ${ADMOB_VERIFIER_KEYS_URL:https://www.gstatic.com/admob/reward/verifier-keys.json}
+      ssv-verification-enabled: ${ADMOB_SSV_VERIFICATION_ENABLED:true}

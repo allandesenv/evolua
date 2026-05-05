@@ -19,32 +19,6 @@ public class CheckInService {
 
   public CheckIn create(
       String userId, String mood, String reflection, Integer energyLevel, String recommendedPractice) {
-    return create(
-        userId,
-        mood,
-        reflection,
-        energyLevel,
-        recommendedPractice,
-        mood,
-        null,
-        null,
-        null,
-        null,
-        null);
-  }
-
-  public CheckIn create(
-      String userId,
-      String mood,
-      String reflection,
-      Integer energyLevel,
-      String recommendedPractice,
-      String emotion,
-      Integer intensity,
-      String energy,
-      String context,
-      String decisionTags,
-      String severityLevel) {
     return repository.save(
         new CheckIn(
             null,
@@ -53,13 +27,7 @@ public class CheckInService {
             reflection == null ? "" : reflection,
             energyLevel,
             recommendedPractice,
-            Instant.now(),
-            emotion,
-            intensity,
-            energy,
-            context,
-            decisionTags,
-            severityLevel));
+            Instant.now()));
   }
 
   public CheckIn updateRecommendedPractice(CheckIn checkIn, String recommendedPractice) {
@@ -71,17 +39,7 @@ public class CheckInService {
             checkIn.reflection(),
             checkIn.energyLevel(),
             recommendedPractice,
-            checkIn.createdAt(),
-            checkIn.emotion(),
-            checkIn.intensity(),
-            checkIn.energy(),
-            checkIn.context(),
-            checkIn.decisionTags(),
-            checkIn.severityLevel()));
-  }
-
-  public java.util.List<CheckIn> recentSince(String userId, Instant from) {
-    return repository.findRecentByUserId(userId, from);
+            checkIn.createdAt()));
   }
 
   public Page<CheckIn> list(
