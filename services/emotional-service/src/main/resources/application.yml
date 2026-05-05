@@ -24,8 +24,14 @@ springdoc:
 app:
   ai:
     base-url: ${APP_AI_BASE_URL:http://ai-service:8089}
+    checkin-enabled: ${AI_CHECKIN_ENABLED:${APP_AI_CHECKIN_ENABLED:false}}
+    chat-enabled: ${AI_CHAT_ENABLED:${APP_AI_CHAT_ENABLED:true}}
+    history-analysis-enabled: ${AI_HISTORY_ANALYSIS_ENABLED:${APP_AI_HISTORY_ANALYSIS_ENABLED:true}}
   content:
     base-url: ${APP_CONTENT_BASE_URL:http://content-service:8083}
+  subscription:
+    base-url: ${APP_SUBSCRIPTION_BASE_URL:http://subscription-service:8087}
+    internal-token: ${APP_BILLING_INTERNAL_TOKEN:change-me-internal-token}
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*}
   security:

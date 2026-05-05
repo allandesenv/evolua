@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import com.evolua.ai.config.AiProperties;
+import com.evolua.ai.infrastructure.security.AuthenticatedUser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
@@ -16,12 +17,16 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class JourneyChatServiceTest {
+  private static final AuthenticatedUser USER =
+      new AuthenticatedUser("user-123", "user@evolua.app", List.of("ROLE_USER"));
+
   @Test
   void promptContextIncludesRecentCheckInsAndJourneySections() {
     var contentClient = Mockito.mock(ContentCatalogClient.class);
     var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var quotaClient = Mockito.mock(SubscriptionQuotaClient.class);
     var service =
-        new JourneyChatService(new AiProperties(), contentClient, emotionalClient, new ObjectMapper());
+        new JourneyChatService(new AiProperties(), contentClient, emotionalClient, quotaClient, new ObjectMapper());
 
     var journey =
         new JourneyTrailSnapshot(
@@ -101,8 +106,9 @@ class JourneyChatServiceTest {
     properties.setModel("");
     var contentClient = Mockito.mock(ContentCatalogClient.class);
     var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var quotaClient = Mockito.mock(SubscriptionQuotaClient.class);
     var service =
-        new JourneyChatService(properties, contentClient, emotionalClient, new ObjectMapper());
+        new JourneyChatService(properties, contentClient, emotionalClient, quotaClient, new ObjectMapper());
 
     when(contentClient.fetchCurrentJourney("Bearer token"))
         .thenReturn(
@@ -135,6 +141,7 @@ class JourneyChatServiceTest {
     var result =
         service.reply(
             "Bearer token",
+            USER,
             "Ainda estou travado e sem clareza para comecar.",
             List.of(),
             7L);
@@ -152,8 +159,9 @@ class JourneyChatServiceTest {
     properties.setModel("");
     var contentClient = Mockito.mock(ContentCatalogClient.class);
     var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var quotaClient = Mockito.mock(SubscriptionQuotaClient.class);
     var service =
-        new JourneyChatService(properties, contentClient, emotionalClient, new ObjectMapper());
+        new JourneyChatService(properties, contentClient, emotionalClient, quotaClient, new ObjectMapper());
 
     when(contentClient.fetchCurrentJourney("Bearer token")).thenReturn(null);
     when(emotionalClient.fetchRecentContext("Bearer token")).thenReturn(null);
@@ -161,6 +169,7 @@ class JourneyChatServiceTest {
     var result =
         service.reply(
             "Bearer token",
+            USER,
             "Qual a melhor meditacao pra mim agora?",
             List.of(),
             null);
@@ -179,8 +188,9 @@ class JourneyChatServiceTest {
     properties.setModel("");
     var contentClient = Mockito.mock(ContentCatalogClient.class);
     var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var quotaClient = Mockito.mock(SubscriptionQuotaClient.class);
     var service =
-        new JourneyChatService(properties, contentClient, emotionalClient, new ObjectMapper());
+        new JourneyChatService(properties, contentClient, emotionalClient, quotaClient, new ObjectMapper());
 
     when(contentClient.fetchCurrentJourney("Bearer token")).thenReturn(null);
     when(emotionalClient.fetchRecentContext("Bearer token")).thenReturn(null);
@@ -188,6 +198,7 @@ class JourneyChatServiceTest {
     var result =
         service.reply(
             "Bearer token",
+            USER,
             "Ainda nao iniciei uma jornada, estou apenas batendo um papo mesmo",
             List.of(),
             null);
@@ -205,8 +216,9 @@ class JourneyChatServiceTest {
     properties.setModel("");
     var contentClient = Mockito.mock(ContentCatalogClient.class);
     var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var quotaClient = Mockito.mock(SubscriptionQuotaClient.class);
     var service =
-        new JourneyChatService(properties, contentClient, emotionalClient, new ObjectMapper());
+        new JourneyChatService(properties, contentClient, emotionalClient, quotaClient, new ObjectMapper());
 
     when(contentClient.fetchCurrentJourney("Bearer token")).thenReturn(null);
     when(emotionalClient.fetchRecentContext("Bearer token")).thenReturn(null);
@@ -214,12 +226,14 @@ class JourneyChatServiceTest {
     var sadResult =
         service.reply(
             "Bearer token",
+            USER,
             "Estou triste e com pensamentos intrusivos hoje",
             List.of(),
             null);
     var meditationResult =
         service.reply(
             "Bearer token",
+            USER,
             "Qual a melhor meditacao pra mim agora?",
             List.of(),
             null);
@@ -237,8 +251,11 @@ class JourneyChatServiceTest {
     properties.setTimeoutSeconds(1);
     var contentClient = Mockito.mock(ContentCatalogClient.class);
     var emotionalClient = Mockito.mock(EmotionalContextClient.class);
+    var quotaClient = Mockito.mock(SubscriptionQuotaClient.class);
+    when(quotaClient.consume("user-123"))
+        .thenReturn(new AiQuotaDecision(true, false, 0, false, true, null));
     var service =
-        new JourneyChatService(properties, contentClient, emotionalClient, new ObjectMapper());
+        new JourneyChatService(properties, contentClient, emotionalClient, quotaClient, new ObjectMapper());
 
     when(contentClient.fetchCurrentJourney("Bearer token")).thenReturn(null);
     when(emotionalClient.fetchRecentContext("Bearer token")).thenReturn(null);
@@ -246,6 +263,7 @@ class JourneyChatServiceTest {
     var result =
         service.reply(
             "Bearer token",
+            USER,
             "Estou triste e com pensamentos intrusivos hoje",
             List.of(),
             null);

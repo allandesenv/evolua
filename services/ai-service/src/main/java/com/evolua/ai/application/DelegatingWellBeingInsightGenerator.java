@@ -1,6 +1,7 @@
 package com.evolua.ai.application;
 
 import com.evolua.ai.config.AiProperties;
+import com.evolua.ai.infrastructure.security.AuthenticatedUser;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.context.annotation.Primary;
@@ -28,11 +29,11 @@ public class DelegatingWellBeingInsightGenerator implements WellBeingInsightGene
       EmotionalContextSnapshot context,
       List<TrailCandidate> candidates,
       List<SpaceCandidate> spaces,
-      List<String> roles) {
+      AuthenticatedUser currentUser) {
     var provider = aiProperties.getProvider() == null ? "" : aiProperties.getProvider().trim();
     return switch (provider.toLowerCase(Locale.ROOT)) {
-      case "openai" -> openAiGenerator.generate(currentCheckIn, context, candidates, spaces, roles);
-      default -> heuristicGenerator.generate(currentCheckIn, context, candidates, spaces, roles);
+      case "openai" -> openAiGenerator.generate(currentCheckIn, context, candidates, spaces, currentUser);
+      default -> heuristicGenerator.generate(currentCheckIn, context, candidates, spaces, currentUser);
     };
   }
 }

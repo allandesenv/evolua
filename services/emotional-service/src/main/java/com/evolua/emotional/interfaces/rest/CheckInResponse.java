@@ -9,5 +9,11 @@ public record CheckInResponse(
     String reflection,
     Integer energyLevel,
     String recommendedPractice,
+    String emotion,
+    Integer intensity,
+    String energy,
+    String context,
+    String decisionTags,
+    String severityLevel,
     CheckInAiInsightResponse aiInsight,
     Instant createdAt) {}

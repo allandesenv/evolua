@@ -27,7 +27,7 @@ public class CheckInInsightService {
       var context = emotionalContextClient.fetchRecentContext(authorizationHeader);
       var candidates = contentCatalogClient.fetchTrailCandidates(authorizationHeader);
       var spaces = socialSpaceCatalogClient.fetchSpaceCandidates(authorizationHeader);
-      return insightGenerator.generate(currentCheckIn, context, candidates, spaces, currentUser.roles());
+      return insightGenerator.generate(currentCheckIn, context, candidates, spaces, currentUser);
     } catch (Exception exception) {
       return new CheckInInsight(
           "Registramos seu check-in e mantivemos uma orientacao segura para agora.",
