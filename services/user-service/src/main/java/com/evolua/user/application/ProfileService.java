@@ -104,6 +104,10 @@ public class ProfileService {
     return repository.findAllByUserId(userId, pageable, search, premium);
   }
 
+  public void deleteByUserId(String userId) {
+    repository.deleteByUserId(userId);
+  }
+
   private String normalizeBio(String bio) {
     return bio == null ? "" : bio.trim();
   }

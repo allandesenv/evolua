@@ -29,3 +29,5 @@ app:
   security:
     jwt:
       secret: ${APP_SECURITY_JWT_SECRET:change-this-secret-before-production-change-this-secret}
+  account:
+    internal-token: ${APP_ACCOUNT_INTERNAL_TOKEN:change-me-internal-token}

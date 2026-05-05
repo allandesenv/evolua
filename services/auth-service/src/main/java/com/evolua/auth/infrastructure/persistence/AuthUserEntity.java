@@ -26,6 +26,7 @@ public class AuthUserEntity {
   private String avatarUrl;
 
   private String roles;
+  private String status;
   private Instant createdAt;
 
   public Long getId() {
@@ -98,6 +99,14 @@ public class AuthUserEntity {
 
   public void setRoles(String roles) {
     this.roles = roles;
+  }
+
+  public String getStatus() {
+    return status;
+  }
+
+  public void setStatus(String status) {
+    this.status = status;
   }
 
   public Instant getCreatedAt() {
