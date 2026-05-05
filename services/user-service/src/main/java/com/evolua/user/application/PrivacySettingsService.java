@@ -18,14 +18,17 @@ public class PrivacySettingsService {
   private final PrivacySettingsRepository repository;
   private final ProfileService profileService;
   private final AvatarStorageService avatarStorageService;
+  private final AccessibilitySettingsService accessibilitySettingsService;
 
   public PrivacySettingsService(
       PrivacySettingsRepository repository,
       ProfileService profileService,
-      AvatarStorageService avatarStorageService) {
+      AvatarStorageService avatarStorageService,
+      AccessibilitySettingsService accessibilitySettingsService) {
     this.repository = repository;
     this.profileService = profileService;
     this.avatarStorageService = avatarStorageService;
+    this.accessibilitySettingsService = accessibilitySettingsService;
   }
 
   public PrivacySettings get(String userId) {
@@ -70,6 +73,7 @@ public class PrivacySettingsService {
     export.put("email", email);
     export.put("profile", profileService.findByUserId(userId).map(ProfileExport::from).orElse(null));
     export.put("preferences", get(userId));
+    export.put("accessibilityPreferences", accessibilitySettingsService.get(userId));
     export.put("exportedAt", Instant.now().toString());
     export.put("message", "Exportacao gerada pelo backend Evolua.");
     return export;
@@ -78,6 +82,7 @@ public class PrivacySettingsService {
   @Transactional
   public void deleteUserData(String userId) {
     repository.deleteByUserId(userId);
+    accessibilitySettingsService.deleteByUserId(userId);
     profileService.deleteByUserId(userId);
     avatarStorageService.deleteForUser(userId);
   }

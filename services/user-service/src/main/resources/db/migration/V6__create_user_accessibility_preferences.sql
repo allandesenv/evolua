@@ -1,0 +1,21 @@
+CREATE TABLE user_accessibility_preferences (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(64) NOT NULL UNIQUE,
+    theme_mode VARCHAR(32) NOT NULL,
+    high_contrast BOOLEAN NOT NULL,
+    reduce_transparency BOOLEAN NOT NULL,
+    animation_level VARCHAR(32) NOT NULL,
+    text_size VARCHAR(32) NOT NULL,
+    reading_spacing VARCHAR(32) NOT NULL,
+    accessible_font BOOLEAN NOT NULL,
+    focus_mode BOOLEAN NOT NULL,
+    reduce_motion BOOLEAN NOT NULL,
+    haptic_feedback BOOLEAN NOT NULL,
+    extended_response_time BOOLEAN NOT NULL,
+    simplified_navigation BOOLEAN NOT NULL,
+    reduce_visual_stimuli BOOLEAN NOT NULL,
+    softer_language BOOLEAN NOT NULL,
+    hide_sensitive_content BOOLEAN NOT NULL,
+    comfort_mode BOOLEAN NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+);

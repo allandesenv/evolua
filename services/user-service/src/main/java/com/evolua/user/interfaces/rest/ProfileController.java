@@ -2,6 +2,7 @@ package com.evolua.user.interfaces.rest;
 
 import com.evolua.user.application.ProfileService;
 import com.evolua.user.application.AvatarStorageService;
+import com.evolua.user.application.AccessibilitySettingsService;
 import com.evolua.user.application.PrivacySettingsService;
 import com.evolua.user.infrastructure.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +26,7 @@ public class ProfileController {
 
   private final ProfileService service;
   private final AvatarStorageService avatarStorageService;
+  private final AccessibilitySettingsService accessibilitySettingsService;
   private final PrivacySettingsService privacySettingsService;
   private final ProfileMapper mapper;
   private final CurrentUserProvider currentUserProvider;
@@ -32,11 +34,13 @@ public class ProfileController {
   public ProfileController(
       ProfileService service,
       AvatarStorageService avatarStorageService,
+      AccessibilitySettingsService accessibilitySettingsService,
       PrivacySettingsService privacySettingsService,
       ProfileMapper mapper,
       CurrentUserProvider currentUserProvider) {
     this.service = service;
     this.avatarStorageService = avatarStorageService;
+    this.accessibilitySettingsService = accessibilitySettingsService;
     this.privacySettingsService = privacySettingsService;
     this.mapper = mapper;
     this.currentUserProvider = currentUserProvider;
@@ -145,6 +149,43 @@ public class ProfileController {
     var settings = privacySettingsService.get(currentUserProvider.getCurrentUser().userId());
     return ResponseEntity.ok(
         ApiResponse.success(200, "Privacy settings", PrivacySettingsResponse.from(settings)));
+  }
+
+  @GetMapping("/me/accessibility-settings")
+  @Operation(summary = "Current profile accessibility settings")
+  public ResponseEntity<ApiResponse<AccessibilitySettingsResponse>> accessibilitySettings() {
+    var settings = accessibilitySettingsService.get(currentUserProvider.getCurrentUser().userId());
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            200, "Accessibility settings", AccessibilitySettingsResponse.from(settings)));
+  }
+
+  @PutMapping("/me/accessibility-settings")
+  @Operation(summary = "Create or update current profile accessibility settings")
+  public ResponseEntity<ApiResponse<AccessibilitySettingsResponse>> saveAccessibilitySettings(
+      @RequestBody AccessibilitySettingsRequest request) {
+    var settings =
+        accessibilitySettingsService.save(
+            currentUserProvider.getCurrentUser().userId(),
+            request.themeMode(),
+            request.highContrast(),
+            request.reduceTransparency(),
+            request.animationLevel(),
+            request.textSize(),
+            request.readingSpacing(),
+            request.accessibleFont(),
+            request.focusMode(),
+            request.reduceMotion(),
+            request.hapticFeedback(),
+            request.extendedResponseTime(),
+            request.simplifiedNavigation(),
+            request.reduceVisualStimuli(),
+            request.softerLanguage(),
+            request.hideSensitiveContent(),
+            request.comfortMode());
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            200, "Accessibility settings saved", AccessibilitySettingsResponse.from(settings)));
   }
 
   @PutMapping("/me/privacy-settings")
