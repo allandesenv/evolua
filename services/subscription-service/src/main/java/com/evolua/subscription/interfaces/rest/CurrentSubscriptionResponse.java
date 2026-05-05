@@ -10,6 +10,8 @@ public record CurrentSubscriptionResponse(
     String billingCycle,
     Boolean premium,
     String provider,
+    Boolean adsEnabled,
+    Integer aiQuotaRemainingToday,
     Instant currentPeriodEndsAt,
     Instant canceledAt,
     Instant createdAt,

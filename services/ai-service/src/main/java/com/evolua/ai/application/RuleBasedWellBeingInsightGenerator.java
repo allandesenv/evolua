@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import com.evolua.ai.infrastructure.security.AuthenticatedUser;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -29,7 +30,7 @@ public class RuleBasedWellBeingInsightGenerator implements WellBeingInsightGener
       EmotionalContextSnapshot context,
       List<TrailCandidate> candidates,
       List<SpaceCandidate> spaces,
-      List<String> roles) {
+      AuthenticatedUser currentUser) {
     var riskLevel = classifyRisk(currentCheckIn);
     var hasFreeText = hasMeaningfulReflection(currentCheckIn);
     var journeyKey = journeyKey(currentCheckIn);

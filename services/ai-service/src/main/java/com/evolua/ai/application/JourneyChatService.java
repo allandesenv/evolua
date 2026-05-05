@@ -1,6 +1,7 @@
 package com.evolua.ai.application;
 
 import com.evolua.ai.config.AiProperties;
+import com.evolua.ai.infrastructure.security.AuthenticatedUser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.Normalizer;
@@ -25,6 +26,7 @@ public class JourneyChatService {
   private final AiProperties aiProperties;
   private final ContentCatalogClient contentCatalogClient;
   private final EmotionalContextClient emotionalContextClient;
+  private final SubscriptionQuotaClient subscriptionQuotaClient;
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
 
@@ -32,10 +34,12 @@ public class JourneyChatService {
       AiProperties aiProperties,
       ContentCatalogClient contentCatalogClient,
       EmotionalContextClient emotionalContextClient,
+      SubscriptionQuotaClient subscriptionQuotaClient,
       ObjectMapper objectMapper) {
     this.aiProperties = aiProperties;
     this.contentCatalogClient = contentCatalogClient;
     this.emotionalContextClient = emotionalContextClient;
+    this.subscriptionQuotaClient = subscriptionQuotaClient;
     this.objectMapper = objectMapper;
 
     var requestFactory = new SimpleClientHttpRequestFactory();
@@ -54,6 +58,7 @@ public class JourneyChatService {
   @SuppressWarnings("unchecked")
   public JourneyChatResponse reply(
       String authorizationHeader,
+      AuthenticatedUser currentUser,
       String message,
       List<JourneyChatMessage> conversationHistory,
       Long trailId) {
@@ -75,6 +80,12 @@ public class JourneyChatService {
     var emotionalContext = emotionalContextClient.fetchRecentContext(authorizationHeader);
     if (isBlank(aiProperties.getApiKey()) || isBlank(aiProperties.getModel())) {
       return fallbackReply(normalizedMessage, currentJourney, emotionalContext, riskLevel, true);
+    }
+
+    var quota = subscriptionQuotaClient.consume(currentUser.userId());
+    if (!Boolean.TRUE.equals(quota.allowed())) {
+      return fallbackReply(normalizedMessage, currentJourney, emotionalContext, riskLevel, true)
+          .withQuotaMetadata(quota, true);
     }
 
     try {
@@ -99,10 +110,12 @@ public class JourneyChatService {
       if (reply.isBlank() || suggestedNextStep.isBlank()) {
         return fallbackReply(normalizedMessage, currentJourney, emotionalContext, riskLevel, true);
       }
-      return new JourneyChatResponse(reply, responseRisk, suggestedNextStep, false);
+      return new JourneyChatResponse(reply, responseRisk, suggestedNextStep, false)
+          .withQuotaMetadata(quota, false);
     } catch (Exception exception) {
       logAiFallback(exception);
-      return fallbackReply(normalizedMessage, currentJourney, emotionalContext, riskLevel, true);
+      return fallbackReply(normalizedMessage, currentJourney, emotionalContext, riskLevel, true)
+          .withQuotaMetadata(quota, false);
     }
   }
 

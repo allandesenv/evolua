@@ -1,6 +1,7 @@
 package com.evolua.subscription.interfaces.rest;
 
 import com.evolua.subscription.domain.BillingCheckout;
+import com.evolua.subscription.domain.AiQuotaStatus;
 import com.evolua.subscription.domain.PlanCatalogItem;
 import com.evolua.subscription.domain.Subscription;
 import java.util.Map;
@@ -33,6 +34,41 @@ public class SubscriptionMapper {
         item.billingCycle(),
         item.premium(),
         item.provider(),
+        !Boolean.TRUE.equals(item.premium()),
+        null,
+        item.currentPeriodEndsAt(),
+        item.canceledAt(),
+        item.createdAt(),
+        item.updatedAt());
+  }
+
+  public CurrentSubscriptionResponse toCurrentResponse(Subscription item, AiQuotaStatus quota) {
+    if (item == null) {
+      return new CurrentSubscriptionResponse(
+          null,
+          quota.userId(),
+          quota.planCode(),
+          "NONE",
+          "MONTHLY",
+          quota.premium(),
+          "MANUAL",
+          !Boolean.TRUE.equals(quota.premium()),
+          quota.remainingToday(),
+          null,
+          null,
+          null,
+          null);
+    }
+    return new CurrentSubscriptionResponse(
+        item.id(),
+        item.userId(),
+        item.planCode(),
+        item.status(),
+        item.billingCycle(),
+        item.premium(),
+        item.provider(),
+        !Boolean.TRUE.equals(item.premium()),
+        quota.remainingToday(),
         item.currentPeriodEndsAt(),
         item.canceledAt(),
         item.createdAt(),
@@ -61,6 +97,8 @@ public class SubscriptionMapper {
         String.valueOf(item.get("userId")),
         Boolean.TRUE.equals(item.get("premium")),
         String.valueOf(item.get("status")),
-        String.valueOf(item.get("planCode")));
+        String.valueOf(item.get("planCode")),
+        Boolean.TRUE.equals(item.get("adsEnabled")),
+        item.get("aiQuotaRemainingToday") instanceof Number number ? number.intValue() : 0);
   }
 }
