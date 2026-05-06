@@ -127,7 +127,8 @@ public class TrailController {
       filters.put("premium", premium);
     }
 
-    var hasPremiumAccess = hasPremiumAccess(currentUser.userId(), currentUser.roles());
+    var access = subscriptionAccessClient.accessSummary(currentUser.userId());
+    var hasPremiumAccess = hasPremiumAccess(currentUser.roles(), access);
     var result =
         service.list(
             currentUser.userId(),
@@ -142,7 +143,7 @@ public class TrailController {
             "Listed",
             PageResponse.from(
                 result,
-                trail -> toResponse(trail, hasPremiumAccess || !Boolean.TRUE.equals(trail.premium())),
+                trail -> toResponse(trail, canAccessTrail(trail, hasPremiumAccess, access.mentorPremiumPassActive())),
                 query.effectiveSortBy(ALLOWED_SORT_FIELDS, DEFAULT_SORT_BY),
                 query.normalizedSortDir(),
                 filters)));
@@ -321,8 +322,8 @@ public class TrailController {
     return roles.contains("ROLE_ADMIN");
   }
 
-  private boolean hasPremiumAccess(String userId, List<String> roles) {
-    return isAdmin(roles) || roles.contains("ROLE_PREMIUM") || subscriptionAccessClient.hasPremiumAccess(userId);
+  private boolean hasPremiumAccess(List<String> roles, SubscriptionAccessClient.AccessSummary access) {
+    return isAdmin(roles) || roles.contains("ROLE_PREMIUM") || access.premium();
   }
 
   private void ensureJourneyAccessible(TrailJourney journey, String userId, List<String> roles) {
@@ -336,9 +337,22 @@ public class TrailController {
     if (Boolean.TRUE.equals(trail.privateTrail()) && !userId.equals(trail.userId())) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Trilha nao encontrada.");
     }
-    if (Boolean.TRUE.equals(trail.premium()) && !hasPremiumAccess(userId, roles)) {
+    var access = subscriptionAccessClient.accessSummary(userId);
+    if (!canAccessTrail(trail, hasPremiumAccess(roles, access), access.mentorPremiumPassActive())) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Premium access required");
     }
+  }
+
+  private boolean canAccessTrail(Trail trail, boolean hasPremiumAccess, boolean mentorPremiumPassActive) {
+    return !Boolean.TRUE.equals(trail.premium())
+        || hasPremiumAccess
+        || (mentorPremiumPassActive && isMentorExclusiveTrail(trail));
+  }
+
+  private boolean isMentorExclusiveTrail(Trail trail) {
+    var category = trail.category() == null ? "" : trail.category().trim().toLowerCase(Locale.ROOT);
+    var sourceStyle = trail.sourceStyle() == null ? "" : trail.sourceStyle().trim().toLowerCase(Locale.ROOT);
+    return "mentoria".equals(category) || "mentor_exclusive".equals(sourceStyle);
   }
 
   public record JourneyTrailRequest(

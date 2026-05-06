@@ -73,7 +73,10 @@ public class SubscriptionController {
         ApiResponse.success(
             200,
             "Current subscription",
-            mapper.toCurrentResponse(service.current(userId), service.quotaStatus(userId, "AI_ACTION"))));
+            mapper.toCurrentResponse(
+                service.current(userId),
+                service.quotaStatus(userId, "AI_ACTION"),
+                service.mentorPremiumPassStatus(userId))));
   }
 
   @GetMapping("/subscriptions")

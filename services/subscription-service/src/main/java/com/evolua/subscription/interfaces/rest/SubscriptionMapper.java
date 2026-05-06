@@ -2,8 +2,10 @@ package com.evolua.subscription.interfaces.rest;
 
 import com.evolua.subscription.domain.BillingCheckout;
 import com.evolua.subscription.domain.AiQuotaStatus;
+import com.evolua.subscription.domain.MentorPremiumPassStatus;
 import com.evolua.subscription.domain.PlanCatalogItem;
 import com.evolua.subscription.domain.Subscription;
+import java.time.Instant;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
@@ -36,13 +38,17 @@ public class SubscriptionMapper {
         item.provider(),
         !Boolean.TRUE.equals(item.premium()),
         null,
+        false,
+        null,
+        !Boolean.TRUE.equals(item.premium()),
         item.currentPeriodEndsAt(),
         item.canceledAt(),
         item.createdAt(),
         item.updatedAt());
   }
 
-  public CurrentSubscriptionResponse toCurrentResponse(Subscription item, AiQuotaStatus quota) {
+  public CurrentSubscriptionResponse toCurrentResponse(
+      Subscription item, AiQuotaStatus quota, MentorPremiumPassStatus mentorPass) {
     if (item == null) {
       return new CurrentSubscriptionResponse(
           null,
@@ -54,6 +60,9 @@ public class SubscriptionMapper {
           "MANUAL",
           !Boolean.TRUE.equals(quota.premium()),
           quota.remainingToday(),
+          mentorPass.active(),
+          mentorPass.endsAt(),
+          mentorPass.rewardedAdAvailable(),
           null,
           null,
           null,
@@ -69,6 +78,9 @@ public class SubscriptionMapper {
         item.provider(),
         !Boolean.TRUE.equals(item.premium()),
         quota.remainingToday(),
+        mentorPass.active(),
+        mentorPass.endsAt(),
+        mentorPass.rewardedAdAvailable(),
         item.currentPeriodEndsAt(),
         item.canceledAt(),
         item.createdAt(),
@@ -99,6 +111,9 @@ public class SubscriptionMapper {
         String.valueOf(item.get("status")),
         String.valueOf(item.get("planCode")),
         Boolean.TRUE.equals(item.get("adsEnabled")),
-        item.get("aiQuotaRemainingToday") instanceof Number number ? number.intValue() : 0);
+        item.get("aiQuotaRemainingToday") instanceof Number number ? number.intValue() : 0,
+        Boolean.TRUE.equals(item.get("mentorPremiumPassActive")),
+        item.get("mentorPremiumPassEndsAt") instanceof Instant instant ? instant : null,
+        Boolean.TRUE.equals(item.get("mentorRewardedAdAvailable")));
   }
 }
