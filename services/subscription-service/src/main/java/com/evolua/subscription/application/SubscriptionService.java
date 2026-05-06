@@ -11,7 +11,10 @@ import com.evolua.subscription.domain.BillingCheckout;
 import com.evolua.subscription.domain.BillingCheckoutRepository;
 import com.evolua.subscription.domain.BillingEvent;
 import com.evolua.subscription.domain.BillingEventRepository;
+import com.evolua.subscription.domain.MentorPremiumPassStatus;
 import com.evolua.subscription.domain.PlanCatalogItem;
+import com.evolua.subscription.domain.RewardEntitlement;
+import com.evolua.subscription.domain.RewardEntitlementRepository;
 import com.evolua.subscription.domain.Subscription;
 import com.evolua.subscription.domain.SubscriptionRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -31,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SubscriptionService {
   private static final String AI_ACTION_RESOURCE = "AI_ACTION";
+  private static final String MENTOR_PREMIUM_PASS_RESOURCE = "MENTOR_PREMIUM_PASS";
   private static final int FREE_DAILY_AI_LIMIT = 1;
   private static final int FREE_DAILY_REWARD_LIMIT = 1;
   private static final int PREMIUM_DAILY_AI_LIMIT = 10;
@@ -38,6 +42,7 @@ public class SubscriptionService {
   private final SubscriptionRepository subscriptionRepository;
   private final AiUsageLedgerRepository aiUsageLedgerRepository;
   private final AdRewardSessionRepository adRewardSessionRepository;
+  private final RewardEntitlementRepository rewardEntitlementRepository;
   private final BillingCheckoutRepository billingCheckoutRepository;
   private final BillingEventRepository billingEventRepository;
   private final PlanCatalogService planCatalogService;
@@ -49,6 +54,7 @@ public class SubscriptionService {
       SubscriptionRepository subscriptionRepository,
       AiUsageLedgerRepository aiUsageLedgerRepository,
       AdRewardSessionRepository adRewardSessionRepository,
+      RewardEntitlementRepository rewardEntitlementRepository,
       BillingCheckoutRepository billingCheckoutRepository,
       BillingEventRepository billingEventRepository,
       PlanCatalogService planCatalogService,
@@ -58,6 +64,7 @@ public class SubscriptionService {
     this.subscriptionRepository = subscriptionRepository;
     this.aiUsageLedgerRepository = aiUsageLedgerRepository;
     this.adRewardSessionRepository = adRewardSessionRepository;
+    this.rewardEntitlementRepository = rewardEntitlementRepository;
     this.billingCheckoutRepository = billingCheckoutRepository;
     this.billingEventRepository = billingEventRepository;
     this.planCatalogService = planCatalogService;
@@ -219,6 +226,7 @@ public class SubscriptionService {
 
   public Map<String, Object> accessSummary(String userId) {
     var current = current(userId);
+    var mentorPass = mentorPremiumPassStatus(userId);
     var response = new LinkedHashMap<String, Object>();
     response.put("userId", userId);
     response.put("premium", hasPremiumAccess(userId));
@@ -227,7 +235,26 @@ public class SubscriptionService {
     var quota = quotaStatus(userId, AI_ACTION_RESOURCE);
     response.put("adsEnabled", !Boolean.TRUE.equals(quota.premium()));
     response.put("aiQuotaRemainingToday", quota.remainingToday());
+    response.put("mentorPremiumPassActive", mentorPass.active());
+    response.put("mentorPremiumPassEndsAt", mentorPass.endsAt());
+    response.put("mentorRewardedAdAvailable", mentorPass.rewardedAdAvailable());
     return response;
+  }
+
+  @Transactional
+  public MentorPremiumPassStatus mentorPremiumPassStatus(String userId) {
+    var now = Instant.now();
+    var active = rewardEntitlementRepository.findActive(userId, MENTOR_PREMIUM_PASS_RESOURCE, now);
+    var premium = hasPremiumAccess(userId);
+    var dayStart = LocalDate.now(ZoneOffset.UTC).atStartOfDay().toInstant(ZoneOffset.UTC);
+    var dayEnd = dayStart.plus(1, ChronoUnit.DAYS);
+    var alreadyGrantedToday =
+        rewardEntitlementRepository.existsStartedBetween(
+            userId, MENTOR_PREMIUM_PASS_RESOURCE, dayStart, dayEnd);
+    return new MentorPremiumPassStatus(
+        active != null,
+        active == null ? null : active.expiresAt(),
+        !premium && active == null && !alreadyGrantedToday);
   }
 
   @Transactional
@@ -279,7 +306,19 @@ public class SubscriptionService {
 
   @Transactional
   public AdRewardSession createRewardSession(String userId, String rewardType) {
-    var quota = quotaStatus(userId, normalizeResource(rewardType));
+    var normalizedRewardType = normalizeResource(rewardType);
+    if (MENTOR_PREMIUM_PASS_RESOURCE.equals(normalizedRewardType)) {
+      var pass = mentorPremiumPassStatus(userId);
+      if (hasPremiumAccess(userId)) {
+        throw new IllegalArgumentException("Premium users do not need rewarded ads");
+      }
+      if (!Boolean.TRUE.equals(pass.rewardedAdAvailable())) {
+        throw new IllegalArgumentException("Mentor rewarded pass limit reached for today");
+      }
+      return createAdRewardSession(userId, normalizedRewardType);
+    }
+
+    var quota = quotaStatus(userId, normalizedRewardType);
     if (Boolean.TRUE.equals(quota.premium())) {
       throw new IllegalArgumentException("Premium users do not need rewarded ads");
     }
@@ -287,6 +326,10 @@ public class SubscriptionService {
       throw new IllegalArgumentException("Rewarded ad limit reached for today");
     }
 
+    return createAdRewardSession(userId, normalizedRewardType);
+  }
+
+  private AdRewardSession createAdRewardSession(String userId, String rewardType) {
     var now = Instant.now();
     return adRewardSessionRepository.save(
         new AdRewardSession(
@@ -294,7 +337,7 @@ public class SubscriptionService {
             UUID.randomUUID().toString(),
             userId,
             "ADMOB",
-            normalizeResource(rewardType),
+            rewardType,
             "CREATED",
             null,
             now.plus(30, ChronoUnit.MINUTES),
@@ -336,6 +379,27 @@ public class SubscriptionService {
       return session;
     }
 
+    if (MENTOR_PREMIUM_PASS_RESOURCE.equals(session.rewardType())) {
+      var pass = mentorPremiumPassStatus(session.userId());
+      if (!Boolean.TRUE.equals(pass.rewardedAdAvailable())) {
+        return session;
+      }
+      grantMentorPremiumPass(session);
+      return adRewardSessionRepository.save(
+          new AdRewardSession(
+              session.id(),
+              session.publicId(),
+              session.userId(),
+              session.provider(),
+              session.rewardType(),
+              "GRANTED",
+              normalizedTransactionId,
+              session.expiresAt(),
+              Instant.now(),
+              session.createdAt(),
+              Instant.now()));
+    }
+
     var ledger = todayLedger(session.userId(), session.rewardType());
     if (ledger.rewardGranted() >= FREE_DAILY_REWARD_LIMIT) {
       return session;
@@ -365,6 +429,26 @@ public class SubscriptionService {
             Instant.now(),
             session.createdAt(),
             Instant.now()));
+  }
+
+  private RewardEntitlement grantMentorPremiumPass(AdRewardSession session) {
+    var now = Instant.now();
+    var dayEnd =
+        LocalDate.now(ZoneOffset.UTC)
+            .plusDays(1)
+            .atStartOfDay()
+            .toInstant(ZoneOffset.UTC);
+    return rewardEntitlementRepository.save(
+        new RewardEntitlement(
+            null,
+            session.userId(),
+            MENTOR_PREMIUM_PASS_RESOURCE,
+            session.id(),
+            "ACTIVE",
+            now,
+            dayEnd,
+            now,
+            now));
   }
 
   private BillingCheckout applyPaymentToCheckout(
