@@ -31,3 +31,15 @@ app:
       secret: ${APP_SECURITY_JWT_SECRET:change-this-secret-before-production-change-this-secret}
   account:
     internal-token: ${APP_ACCOUNT_INTERNAL_TOKEN:change-me-internal-token}
+  support:
+    links:
+      help-center-url: ${APP_SUPPORT_HELP_CENTER_URL:}
+      support-url: ${APP_SUPPORT_SUPPORT_URL:}
+      professional-help-url: ${APP_SUPPORT_PROFESSIONAL_HELP_URL:}
+      emotional-resources-url: ${APP_SUPPORT_EMOTIONAL_RESOURCES_URL:}
+      ai-limits-url: ${APP_SUPPORT_AI_LIMITS_URL:}
+    status:
+      system-health-url: ${APP_SUPPORT_SYSTEM_HEALTH_URL:http://localhost:8082/actuator/health}
+      ai-health-url: ${APP_SUPPORT_AI_HEALTH_URL:http://localhost:8089/actuator/health}
+      notifications-health-url: ${APP_SUPPORT_NOTIFICATIONS_HEALTH_URL:http://localhost:8088/actuator/health}
+      sync-health-url: ${APP_SUPPORT_SYNC_HEALTH_URL:http://localhost:8083/actuator/health}

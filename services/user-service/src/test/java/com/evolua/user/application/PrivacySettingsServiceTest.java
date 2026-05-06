@@ -16,6 +16,8 @@ class PrivacySettingsServiceTest {
   private PrivacySettingsRepository repository;
   private ProfileService profileService;
   private AvatarStorageService avatarStorageService;
+  private AccessibilitySettingsService accessibilitySettingsService;
+  private FeedbackService feedbackService;
   private PrivacySettingsService service;
 
   @BeforeEach
@@ -23,7 +25,11 @@ class PrivacySettingsServiceTest {
     repository = mock(PrivacySettingsRepository.class);
     profileService = mock(ProfileService.class);
     avatarStorageService = mock(AvatarStorageService.class);
-    service = new PrivacySettingsService(repository, profileService, avatarStorageService);
+    accessibilitySettingsService = mock(AccessibilitySettingsService.class);
+    feedbackService = mock(FeedbackService.class);
+    service =
+        new PrivacySettingsService(
+            repository, profileService, avatarStorageService, accessibilitySettingsService, feedbackService);
   }
 
   @Test
@@ -90,6 +96,8 @@ class PrivacySettingsServiceTest {
     service.deleteUserData("user-1");
 
     verify(repository).deleteByUserId("user-1");
+    verify(accessibilitySettingsService).deleteByUserId("user-1");
+    verify(feedbackService).deleteByUserId("user-1");
     verify(profileService).deleteByUserId("user-1");
     verify(avatarStorageService).deleteForUser("user-1");
   }
