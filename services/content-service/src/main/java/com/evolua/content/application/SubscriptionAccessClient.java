@@ -17,7 +17,7 @@ public class SubscriptionAccessClient {
     this.internalToken = internalToken;
   }
 
-  public boolean hasPremiumAccess(String userId) {
+  public AccessSummary accessSummary(String userId) {
     var response =
         restClient
             .get()
@@ -27,10 +27,17 @@ public class SubscriptionAccessClient {
             .body(Map.class);
 
     if (response == null || !(response.get("data") instanceof Map<?, ?> data)) {
-      return false;
+      return new AccessSummary(false, false);
     }
 
     var premium = data.get("premium");
-    return Boolean.TRUE.equals(premium);
+    var mentorPass = data.get("mentorPremiumPassActive");
+    return new AccessSummary(Boolean.TRUE.equals(premium), Boolean.TRUE.equals(mentorPass));
   }
+
+  public boolean hasPremiumAccess(String userId) {
+    return accessSummary(userId).premium();
+  }
+
+  public record AccessSummary(boolean premium, boolean mentorPremiumPassActive) {}
 }

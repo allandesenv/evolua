@@ -14,10 +14,14 @@ import com.evolua.subscription.domain.AiUsageLedger;
 import com.evolua.subscription.domain.AiUsageLedgerRepository;
 import com.evolua.subscription.domain.BillingCheckoutRepository;
 import com.evolua.subscription.domain.BillingEventRepository;
+import com.evolua.subscription.domain.RewardEntitlement;
+import com.evolua.subscription.domain.RewardEntitlementRepository;
 import com.evolua.subscription.domain.Subscription;
 import com.evolua.subscription.domain.SubscriptionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -86,6 +90,40 @@ class SubscriptionServiceQuotaTest {
     assertFalse(blocked.status().upgradeRecommended());
   }
 
+  @Test
+  void rewardedAdGrantsDailyMentorPremiumPassWithoutConsumingAiQuota() {
+    var service = serviceFor(null);
+
+    var session = service.createRewardSession("free-user", "MENTOR_PREMIUM_PASS");
+    var granted = service.grantAdMobReward(session.publicId(), "mentor-tx-1");
+    var duplicate = service.grantAdMobReward(session.publicId(), "mentor-tx-1");
+    var pass = service.mentorPremiumPassStatus("free-user");
+    var aiAction = service.consumeAiQuota("free-user", "AI_ACTION");
+
+    assertEquals("GRANTED", granted.status());
+    assertEquals("GRANTED", duplicate.status());
+    assertTrue(pass.active());
+    assertFalse(pass.rewardedAdAvailable());
+    assertTrue(aiAction.allowed());
+    assertEquals("FREE_DAILY", aiAction.consumptionType());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> service.createRewardSession("free-user", "MENTOR_PREMIUM_PASS"));
+  }
+
+  @Test
+  void accessSummaryIncludesMentorPassFields() {
+    var service = serviceFor(null);
+    var session = service.createRewardSession("free-user", "MENTOR_PREMIUM_PASS");
+    service.grantAdMobReward(session.publicId(), "mentor-tx-2");
+
+    var summary = service.accessSummary("free-user");
+
+    assertEquals(Boolean.TRUE, summary.get("mentorPremiumPassActive"));
+    assertTrue(summary.get("mentorPremiumPassEndsAt") instanceof Instant);
+    assertEquals(Boolean.FALSE, summary.get("mentorRewardedAdAvailable"));
+  }
+
   private SubscriptionService serviceFor(Subscription currentSubscription) {
     var subscriptionRepository = mock(SubscriptionRepository.class);
     when(subscriptionRepository.findCurrentByUserId("free-user")).thenReturn(currentSubscription);
@@ -94,6 +132,7 @@ class SubscriptionServiceQuotaTest {
         subscriptionRepository,
         new InMemoryAiUsageLedgerRepository(),
         new InMemoryAdRewardSessionRepository(),
+        new InMemoryRewardEntitlementRepository(),
         mock(BillingCheckoutRepository.class),
         mock(BillingEventRepository.class),
         new PlanCatalogService(),
@@ -176,6 +215,56 @@ class SubscriptionServiceQuotaTest {
                       && item.rewardType().equals(rewardType)
                       && "GRANTED".equals(item.status())
                       && providerTransactionId.equals(item.providerTransactionId()));
+    }
+  }
+
+  private static final class InMemoryRewardEntitlementRepository implements RewardEntitlementRepository {
+    private final Map<Long, RewardEntitlement> items = new HashMap<>();
+    private long nextId = 1;
+
+    @Override
+    public RewardEntitlement save(RewardEntitlement item) {
+      var saved =
+          item.id() == null
+              ? new RewardEntitlement(
+                  nextId++,
+                  item.userId(),
+                  item.entitlementType(),
+                  item.sourceRewardSessionId(),
+                  item.status(),
+                  item.startsAt(),
+                  item.expiresAt(),
+                  item.createdAt(),
+                  item.updatedAt())
+              : item;
+      items.put(saved.id(), saved);
+      return saved;
+    }
+
+    @Override
+    public RewardEntitlement findActive(String userId, String entitlementType, Instant now) {
+      return items.values().stream()
+          .filter(
+              item ->
+                  item.userId().equals(userId)
+                      && item.entitlementType().equals(entitlementType)
+                      && "ACTIVE".equals(item.status())
+                      && !item.startsAt().isAfter(now)
+                      && item.expiresAt().isAfter(now))
+          .findFirst()
+          .orElse(null);
+    }
+
+    @Override
+    public boolean existsStartedBetween(
+        String userId, String entitlementType, Instant startsAtInclusive, Instant startsAtExclusive) {
+      return items.values().stream()
+          .anyMatch(
+              item ->
+                  item.userId().equals(userId)
+                      && item.entitlementType().equals(entitlementType)
+                      && !item.startsAt().isBefore(startsAtInclusive)
+                      && item.startsAt().isBefore(startsAtExclusive));
     }
   }
 }
